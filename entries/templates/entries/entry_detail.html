@@ -1,0 +1,47 @@
+{% extends "entries/base.html" %}
+{% block title %}{{ entry.date }} - Journal{% endblock %}
+{% block content %}
+    <h1>{{ entry.date }}</h1>
+    <p><a href="{% url 'entries:edit' entry.pk %}">Edit this entry</a></p>
+
+    <section class="part">
+        <h2>1. Check-in</h2>
+        <p class="scores">
+            Mental: {{ entry.mental_score|default:"-" }}/10 &middot;
+            Physical: {{ entry.physical_score|default:"-" }}/10 &middot;
+            Emotional: {{ entry.emotional_score|default:"-" }}/10 &middot;
+            Spiritual: {{ entry.spiritual_score|default:"-" }}/10
+        </p>
+        {% if entry.checkin_notes %}<p>{{ entry.checkin_notes|linebreaksbr }}</p>{% endif %}
+    </section>
+
+    <section class="part">
+        <h2>2. Stoic guided journal</h2>
+        {% if entry.stoic_prompt %}<p class="prompt">{{ entry.stoic_prompt.text }}</p>{% endif %}
+        <p>{{ entry.stoic_response|default:"—"|linebreaksbr }}</p>
+    </section>
+
+    <section class="part">
+        <h2>3. Biblical devotional</h2>
+        {% if entry.devotional_prompt %}
+            <p class="prompt">{{ entry.devotional_prompt.reference }}{% if entry.devotional_prompt.verse_text %} — {{ entry.devotional_prompt.verse_text }}{% endif %}</p>
+            <p class="prompt">{{ entry.devotional_prompt.reflection_prompt }}</p>
+        {% endif %}
+        <p>{{ entry.devotional_response|default:"—"|linebreaksbr }}</p>
+    </section>
+
+    <section class="part">
+        <h2>4. Freeform journal</h2>
+        <p>{{ entry.freeform_entry|default:"—"|linebreaksbr }}</p>
+    </section>
+
+    <section class="part">
+        <h2>5. Exercise</h2>
+        <p class="scores">
+            {% if entry.exercise_completed %}Done{% else %}Not logged{% endif %}
+            {% if entry.exercise_type %} &middot; {{ entry.exercise_type }}{% endif %}
+            {% if entry.exercise_duration_minutes %} &middot; {{ entry.exercise_duration_minutes }} min{% endif %}
+        </p>
+        {% if entry.exercise_notes %}<p>{{ entry.exercise_notes|linebreaksbr }}</p>{% endif %}
+    </section>
+{% endblock %}

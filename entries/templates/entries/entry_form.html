@@ -1,0 +1,76 @@
+{% extends "entries/base.html" %}
+{% block title %}{% if form.instance.pk %}Edit entry{% else %}New entry{% endif %} - Journal{% endblock %}
+{% block content %}
+    <h1>{% if form.instance.pk %}Edit entry — {{ form.instance.date }}{% else %}New journal entry{% endif %}</h1>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <label for="{{ form.date.id_for_label }}">Date</label>
+        {{ form.date }}
+        {{ form.date.errors }}
+
+        <section class="part">
+            <h2>1. Check-in</h2>
+            {% for field in form %}
+                {% if field.name in "mental_score,physical_score,emotional_score,spiritual_score" %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <div class="slider-row">
+                        {{ field }}
+                        <output for="{{ field.id_for_label }}">{{ field.value|default:5 }}</output>
+                    </div>
+                    {{ field.errors }}
+                {% endif %}
+            {% endfor %}
+            <label for="{{ form.checkin_notes.id_for_label }}">Notes</label>
+            {{ form.checkin_notes }}
+        </section>
+
+        <section class="part">
+            <h2>2. Stoic guided journal</h2>
+            <label for="{{ form.stoic_prompt.id_for_label }}">Prompt</label>
+            {{ form.stoic_prompt }}
+            <label for="{{ form.stoic_response.id_for_label }}">Your reflection</label>
+            {{ form.stoic_response }}
+        </section>
+
+        <section class="part">
+            <h2>3. Biblical devotional</h2>
+            <label for="{{ form.devotional_prompt.id_for_label }}">Passage</label>
+            {{ form.devotional_prompt }}
+            <label for="{{ form.devotional_response.id_for_label }}">Your reflection</label>
+            {{ form.devotional_response }}
+        </section>
+
+        <section class="part">
+            <h2>4. Freeform journal</h2>
+            <label for="{{ form.freeform_entry.id_for_label }}">Mental / emotional dump</label>
+            {{ form.freeform_entry }}
+        </section>
+
+        <section class="part">
+            <h2>5. Exercise</h2>
+            <label for="{{ form.exercise_completed.id_for_label }}">
+                {{ form.exercise_completed }} Completed today
+            </label>
+            <label for="{{ form.exercise_type.id_for_label }}">Type</label>
+            {{ form.exercise_type }}
+            <label for="{{ form.exercise_duration_minutes.id_for_label }}">Duration (minutes)</label>
+            {{ form.exercise_duration_minutes }}
+            <label for="{{ form.exercise_notes.id_for_label }}">Notes</label>
+            {{ form.exercise_notes }}
+        </section>
+
+        <button class="btn" type="submit">Save entry</button>
+    </form>
+
+    <script>
+        document.querySelectorAll('input.slider').forEach(function (slider) {
+            var output = slider.parentElement.querySelector('output');
+            slider.addEventListener('input', function () {
+                output.textContent = slider.value;
+            });
+        });
+    </script>
+{% endblock %}

@@ -27,6 +27,8 @@
                     {{ stoic_prompt_obj.text }}
                     {% if stoic_prompt_obj.source %}<br><span class="helptext">— {{ stoic_prompt_obj.source }}</span>{% endif %}
                 </p>
+                {% if stoic_prompt_obj.context_summary %}<p>{{ stoic_prompt_obj.context_summary }}</p>{% endif %}
+                {% if stoic_prompt_obj.reflection_prompt %}<p class="prompt">{{ stoic_prompt_obj.reflection_prompt }}</p>{% endif %}
             {% endif %}
             {{ form.stoic_prompt }}
             <label for="{{ form.stoic_response.id_for_label }}">Your reflection</label>
@@ -41,9 +43,9 @@
                     {% if devotional_prompt_obj.verse_text %}<br>{{ devotional_prompt_obj.verse_text }}{% endif %}
                 </p>
                 {% if devotional_prompt_obj.verse_text %}<p class="helptext">{{ bible_attribution }}</p>{% endif %}
+                {% if devotional_prompt_obj.context_summary %}<p>{{ devotional_prompt_obj.context_summary }}</p>{% endif %}
                 <p class="prompt">{{ devotional_prompt_obj.reflection_prompt }}</p>
             {% endif %}
-            <label for="{{ form.devotional_prompt.id_for_label }}">Passage</label>
             {{ form.devotional_prompt }}
             <label for="{{ form.devotional_response.id_for_label }}">Your reflection</label>
             {{ form.devotional_response }}

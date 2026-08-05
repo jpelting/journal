@@ -20,10 +20,14 @@ class Command(BaseCommand):
 
         created = 0
         fetched = 0
+        backfilled = 0
         for prompt in prompts:
             obj, was_created = DevotionalPrompt.objects.get_or_create(
                 reference=prompt["reference"],
-                defaults={"reflection_prompt": prompt["reflection_prompt"]},
+                defaults={
+                    "reflection_prompt": prompt["reflection_prompt"],
+                    "context_summary": prompt.get("context_summary", ""),
+                },
             )
             if was_created:
                 created += 1
@@ -32,11 +36,16 @@ class Command(BaseCommand):
                     obj.verse_text = verse_text
                     obj.save(update_fields=["verse_text"])
                     fetched += 1
+            elif not obj.context_summary and prompt.get("context_summary"):
+                obj.context_summary = prompt["context_summary"]
+                obj.save(update_fields=["context_summary"])
+                backfilled += 1
 
         total = len(prompts)
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded {created} new prompt(s) ({fetched} with verse text fetched); "
+                f"backfilled context_summary on {backfilled} existing prompt(s); "
                 f"{total} total in fixture; {DevotionalPrompt.objects.count()} now in database."
             )
         )

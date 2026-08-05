@@ -7,8 +7,10 @@ SCORE_VALIDATORS = [MinValueValidator(1), MaxValueValidator(10)]
 
 
 class StoicPrompt(models.Model):
-    text = models.TextField(help_text="A stoic reflection prompt, e.g. quoting Marcus Aurelius, Seneca, Epictetus.")
+    text = models.TextField(help_text="A stoic quote, e.g. from Marcus Aurelius, Seneca, Epictetus.")
     source = models.CharField(max_length=200, blank=True, help_text="Optional attribution, e.g. 'Meditations, Book 4'.")
+    context_summary = models.TextField(blank=True, default="", help_text="Brief context about the quote/author shown under the quote.")
+    reflection_prompt = models.TextField(blank=True, default="", help_text="A guiding question for the reflection.")
     active = models.BooleanField(default=True)
 
     class Meta:
@@ -21,6 +23,7 @@ class StoicPrompt(models.Model):
 class DevotionalPrompt(models.Model):
     reference = models.CharField(max_length=100, help_text="Scripture reference, e.g. 'Philippians 4:6-7'.")
     verse_text = models.TextField(blank=True, help_text="The passage text, if you want it displayed.")
+    context_summary = models.TextField(blank=True, help_text="Brief context/meaning summary shown under the verse text.")
     reflection_prompt = models.TextField(help_text="A guiding question for the devotional reflection.")
     active = models.BooleanField(default=True)
 

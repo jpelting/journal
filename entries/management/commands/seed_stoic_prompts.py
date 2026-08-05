@@ -18,7 +18,11 @@ class Command(BaseCommand):
         for prompt in prompts:
             _, was_created = StoicPrompt.objects.get_or_create(
                 text=prompt["text"],
-                defaults={"source": prompt.get("source", "")},
+                defaults={
+                    "source": prompt.get("source", ""),
+                    "context_summary": prompt.get("context_summary", ""),
+                    "reflection_prompt": prompt.get("reflection_prompt", ""),
+                },
             )
             if was_created:
                 created += 1

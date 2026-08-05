@@ -36,7 +36,11 @@
 
     <section class="part">
         <h2>2. Stoic guided journal</h2>
-        {% if entry.stoic_prompt %}<p class="prompt">{{ entry.stoic_prompt.text }}</p>{% endif %}
+        {% if entry.stoic_prompt %}
+            <p class="prompt">{{ entry.stoic_prompt.text }}{% if entry.stoic_prompt.source %} — {{ entry.stoic_prompt.source }}{% endif %}</p>
+            {% if entry.stoic_prompt.context_summary %}<p>{{ entry.stoic_prompt.context_summary }}</p>{% endif %}
+            {% if entry.stoic_prompt.reflection_prompt %}<p class="prompt">{{ entry.stoic_prompt.reflection_prompt }}</p>{% endif %}
+        {% endif %}
         <p>{{ entry.stoic_response|default:"—"|linebreaksbr }}</p>
     </section>
 
@@ -45,6 +49,7 @@
         {% if entry.devotional_prompt %}
             <p class="prompt">{{ entry.devotional_prompt.reference }}{% if entry.devotional_prompt.verse_text %} — {{ entry.devotional_prompt.verse_text }}{% endif %}</p>
             {% if entry.devotional_prompt.verse_text %}<p class="helptext">{{ bible_attribution }}</p>{% endif %}
+            {% if entry.devotional_prompt.context_summary %}<p>{{ entry.devotional_prompt.context_summary }}</p>{% endif %}
             <p class="prompt">{{ entry.devotional_prompt.reflection_prompt }}</p>
         {% endif %}
         <p>{{ entry.devotional_response|default:"—"|linebreaksbr }}</p>

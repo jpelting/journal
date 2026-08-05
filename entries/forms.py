@@ -34,6 +34,7 @@ class EntryForm(forms.ModelForm):
             "date": forms.DateInput(attrs={"type": "date"}),
             "stoic_prompt": forms.HiddenInput(),
             "stoic_response": forms.Textarea(attrs={"rows": 5}),
+            "devotional_prompt": forms.HiddenInput(),
             "devotional_response": forms.Textarea(attrs={"rows": 5}),
             "freeform_entry": forms.Textarea(attrs={"rows": 8}),
             "exercise_notes": forms.Textarea(attrs={"rows": 3}),

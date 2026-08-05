@@ -1,0 +1,58 @@
+{% extends "entries/base.html" %}
+{% block title %}Morning Check-in - Journal{% endblock %}
+{% block content %}
+    {% include "entries/_checkin_tabs.html" with active_tab="morning" %}
+    <h1>Morning Check-in</h1>
+    <p class="checkin-meta">
+        {{ now|date:"l, F j" }} &middot; {{ now|date:"g:i A" }}
+        {% if entry.weather_summary %} &middot; {{ entry.weather_summary }} in {{ weather_location }}{% endif %}
+    </p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <section class="part">
+            <h2>How are you doing this morning?</h2>
+            {% for field in form %}
+                {% if field.name in "morning_mental_score,morning_physical_score,morning_emotional_score,morning_spiritual_score" %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <div class="slider-row">
+                        {{ field }}
+                        <output for="{{ field.id_for_label }}">{{ field.value|default:5 }}</output>
+                    </div>
+                    {{ field.errors }}
+                {% endif %}
+            {% endfor %}
+        </section>
+
+        <section class="part">
+            <h2>Goals for today</h2>
+            {{ goal_formset.management_form }}
+            {% for gform in goal_formset %}
+                <div class="goal-row">
+                    {{ gform.id }}
+                    {{ gform.text }}
+                    {{ gform.text.errors }}
+                </div>
+            {% endfor %}
+        </section>
+
+        <section class="part">
+            <h2>Get 1% better</h2>
+            <p class="helptext">What's one small thing you can do today to be 1% better than yesterday?</p>
+            {{ form.one_percent_goal }}
+            {{ form.one_percent_goal.errors }}
+        </section>
+
+        <button class="btn" type="submit">Save morning check-in</button>
+    </form>
+
+    <script>
+        document.querySelectorAll('input.slider').forEach(function (slider) {
+            var output = slider.parentElement.querySelector('output');
+            slider.addEventListener('input', function () {
+                output.textContent = slider.value;
+            });
+        });
+    </script>
+{% endblock %}

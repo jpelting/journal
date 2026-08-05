@@ -1,5 +1,6 @@
 {% extends "entries/base.html" %}
 {% block title %}{{ month_name }} {{ year }} - Journal{% endblock %}
+{% block bodyclass %}wide{% endblock %}
 {% block content %}
     <h1>{{ month_name }} {{ year }}</h1>
     <div class="calendar-nav">
@@ -39,4 +40,10 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <div class="calendar-legend">
+        <span>Lower</span>
+        <span class="gradient"></span>
+        <span>Higher overall condition</span>
+    </div>
 {% endblock %}

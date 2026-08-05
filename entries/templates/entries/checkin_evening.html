@@ -1,0 +1,64 @@
+{% extends "entries/base.html" %}
+{% block title %}Evening Follow-up - Journal{% endblock %}
+{% block content %}
+    {% include "entries/_checkin_tabs.html" with active_tab="evening" %}
+    <h1>Evening Follow-up</h1>
+    <p class="checkin-meta">{{ now|date:"l, F j" }} &middot; {{ now|date:"g:i A" }}</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <section class="part">
+            <h2>How are you doing this evening?</h2>
+            {% for field in form %}
+                {% if field.name in "evening_mental_score,evening_physical_score,evening_emotional_score,evening_spiritual_score" %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <div class="slider-row">
+                        {{ field }}
+                        <output for="{{ field.id_for_label }}">{{ field.value|default:5 }}</output>
+                    </div>
+                    {{ field.errors }}
+                {% endif %}
+            {% endfor %}
+        </section>
+
+        <section class="part">
+            <h2>Today's goals</h2>
+            {% if goal_formset.forms %}
+                <p class="scores">{{ percent_complete }}% complete</p>
+                {{ goal_formset.management_form }}
+                {% for gform in goal_formset %}
+                    {{ gform.id }}
+                    <label class="goal-check">
+                        {{ gform.completed }} {{ gform.instance.text }}
+                    </label>
+                {% endfor %}
+            {% else %}
+                <p class="helptext">No goals were set this morning.</p>
+            {% endif %}
+        </section>
+
+        <section class="part">
+            <h2>Your 1% goal</h2>
+            {% if entry.one_percent_goal %}
+                <p class="prompt">{{ entry.one_percent_goal }}</p>
+                <label class="goal-check">
+                    {{ form.one_percent_goal_achieved }} I accomplished this today
+                </label>
+            {% else %}
+                <p class="helptext">No 1% goal was set this morning.</p>
+            {% endif %}
+        </section>
+
+        <button class="btn" type="submit">Save evening follow-up</button>
+    </form>
+
+    <script>
+        document.querySelectorAll('input.slider').forEach(function (slider) {
+            var output = slider.parentElement.querySelector('output');
+            slider.addEventListener('input', function () {
+                output.textContent = slider.value;
+            });
+        });
+    </script>
+{% endblock %}

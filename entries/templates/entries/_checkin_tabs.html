@@ -1,0 +1,5 @@
+<div class="checkin-tabs">
+    <a href="{% url 'entries:checkin-morning' %}" class="{% if active_tab == 'morning' %}active{% endif %}">Morning Check-in</a>
+    <a href="{% url 'entries:checkin-evening' %}" class="{% if active_tab == 'evening' %}active{% endif %}">Evening Follow-up</a>
+    <a href="{% url 'entries:checkin-moment' %}" class="{% if active_tab == 'moment' %}active{% endif %}">In the Moment</a>
+</div>

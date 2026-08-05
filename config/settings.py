@@ -116,3 +116,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+# Weather (used by the morning check-in page)
+
+WEATHER_LOCATION_NAME = 'Mount Holly, NC'
+WEATHER_LATITUDE = 35.29819
+WEATHER_LONGITUDE = -81.01591
+WEATHER_TIMEZONE = 'America/New_York'

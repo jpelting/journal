@@ -1,6 +1,11 @@
 from django.contrib import admin
 
-from .models import DevotionalPrompt, Entry, StoicPrompt
+from .models import DevotionalPrompt, Entry, Goal, MomentCheckIn, StoicPrompt
+
+
+class GoalInline(admin.TabularInline):
+    model = Goal
+    extra = 0
 
 
 @admin.register(Entry)
@@ -16,6 +21,7 @@ class EntryAdmin(admin.ModelAdmin):
     list_filter = ["exercise_completed"]
     date_hierarchy = "date"
     ordering = ["-date"]
+    inlines = [GoalInline]
 
     fieldsets = [
         ("Entry", {"fields": ["date"]}),
@@ -23,11 +29,17 @@ class EntryAdmin(admin.ModelAdmin):
             "1. Check-in",
             {
                 "fields": [
-                    "mental_score",
-                    "physical_score",
-                    "emotional_score",
-                    "spiritual_score",
-                    "checkin_notes",
+                    "weather_summary",
+                    "morning_mental_score",
+                    "morning_physical_score",
+                    "morning_emotional_score",
+                    "morning_spiritual_score",
+                    "one_percent_goal",
+                    "evening_mental_score",
+                    "evening_physical_score",
+                    "evening_emotional_score",
+                    "evening_spiritual_score",
+                    "one_percent_goal_achieved",
                 ]
             },
         ),
@@ -67,3 +79,10 @@ class StoicPromptAdmin(admin.ModelAdmin):
 class DevotionalPromptAdmin(admin.ModelAdmin):
     list_display = ["reference", "active"]
     list_filter = ["active"]
+
+
+@admin.register(MomentCheckIn)
+class MomentCheckInAdmin(admin.ModelAdmin):
+    list_display = ["created_at", "emotions", "entry"]
+    date_hierarchy = "created_at"
+    ordering = ["-created_at"]

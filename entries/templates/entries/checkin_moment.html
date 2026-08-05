@@ -1,0 +1,41 @@
+{% extends "entries/base.html" %}
+{% block title %}In the Moment - Journal{% endblock %}
+{% block content %}
+    {% include "entries/_checkin_tabs.html" with active_tab="moment" %}
+    <h1>In the Moment</h1>
+    <p class="checkin-meta">{{ now|date:"l, F j" }} &middot; {{ now|date:"g:i A" }}</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <section class="part">
+            <h2>What are you feeling?</h2>
+            <div class="emotion-grid">
+                {% for checkbox in form.emotions %}
+                    <label class="emotion-chip">{{ checkbox.tag }} {{ checkbox.choice_label }}</label>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="part">
+            <h2>Write it out</h2>
+            <label for="{{ form.note.id_for_label }}">What are you feeling, and why?</label>
+            {{ form.note }}
+        </section>
+
+        <button class="btn" type="submit">Log this moment</button>
+    </form>
+
+    {% if recent_moments %}
+        <h2>Recent moments</h2>
+        <ul class="entry-list">
+            {% for moment in recent_moments %}
+                <li>
+                    <strong>{{ moment.created_at|date:"M j, g:i A" }}</strong>
+                    {% if moment.emotion_list %}<div class="scores">{{ moment.emotion_list|join:", "|title }}</div>{% endif %}
+                    {% if moment.note %}<p>{{ moment.note }}</p>{% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

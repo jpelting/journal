@@ -1,13 +1,22 @@
 import calendar
 from datetime import date
 
-from django.shortcuts import render
+from django.conf import settings
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from .forms import EntryForm
-from .models import DevotionalPrompt, Entry, StoicPrompt
+from .forms import (
+    EntryForm,
+    EveningCheckInForm,
+    GoalCompletionFormSet,
+    GoalFormSet,
+    MomentCheckInForm,
+    MorningCheckInForm,
+)
+from .models import DevotionalPrompt, Entry, MomentCheckIn, StoicPrompt
+from .weather import get_current_weather
 
 
 class EntryListView(ListView):
@@ -25,6 +34,15 @@ class EntryFormMixin:
     model = Entry
     form_class = EntryForm
     template_name = "entries/entry_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["stoic_prompt_obj"] = self._resolve_stoic_prompt(context["form"])
+        return context
+
+    def _resolve_stoic_prompt(self, form):
+        pk = form["stoic_prompt"].value()
+        return StoicPrompt.objects.filter(pk=pk).first() if pk else None
 
 
 class EntryCreateView(EntryFormMixin, CreateView):
@@ -108,3 +126,99 @@ def calendar_view(request, year=None, month=None):
         "next_month": next_month,
     }
     return render(request, "entries/calendar.html", context)
+
+
+def _today_entry():
+    entry, _ = Entry.objects.get_or_create(date=timezone.localdate())
+    return entry
+
+
+def checkin_view(request):
+    return redirect("entries:checkin-morning")
+
+
+def checkin_morning_view(request):
+    entry = _today_entry()
+    if not entry.weather_summary:
+        summary = get_current_weather()
+        if summary:
+            entry.weather_summary = summary
+            entry.save(update_fields=["weather_summary"])
+
+    if request.method == "POST":
+        form = MorningCheckInForm(request.POST, instance=entry)
+        goal_formset = GoalFormSet(request.POST, instance=entry, prefix="goals")
+        if form.is_valid() and goal_formset.is_valid():
+            form.save()
+            goal_formset.save()
+            return redirect("entries:checkin-morning")
+    else:
+        form = MorningCheckInForm(instance=entry)
+        goal_formset = GoalFormSet(instance=entry, prefix="goals")
+
+    return render(
+        request,
+        "entries/checkin_morning.html",
+        {
+            "entry": entry,
+            "form": form,
+            "goal_formset": goal_formset,
+            "now": timezone.localtime(),
+            "weather_location": settings.WEATHER_LOCATION_NAME,
+        },
+    )
+
+
+def checkin_evening_view(request):
+    entry = _today_entry()
+
+    if request.method == "POST":
+        form = EveningCheckInForm(request.POST, instance=entry)
+        goal_formset = GoalCompletionFormSet(request.POST, instance=entry, prefix="goals")
+        if form.is_valid() and goal_formset.is_valid():
+            form.save()
+            goal_formset.save()
+            return redirect("entries:checkin-evening")
+    else:
+        form = EveningCheckInForm(instance=entry)
+        goal_formset = GoalCompletionFormSet(instance=entry, prefix="goals")
+
+    goals = list(entry.goals.all())
+    completed = sum(1 for goal in goals if goal.completed)
+    percent_complete = round(completed / len(goals) * 100) if goals else None
+
+    return render(
+        request,
+        "entries/checkin_evening.html",
+        {
+            "entry": entry,
+            "form": form,
+            "goal_formset": goal_formset,
+            "percent_complete": percent_complete,
+            "now": timezone.localtime(),
+        },
+    )
+
+
+def checkin_moment_view(request):
+    if request.method == "POST":
+        form = MomentCheckInForm(request.POST)
+        if form.is_valid():
+            MomentCheckIn.objects.create(
+                emotions=",".join(form.cleaned_data["emotions"]),
+                note=form.cleaned_data["note"],
+                entry=Entry.objects.filter(date=timezone.localdate()).first(),
+            )
+            return redirect("entries:checkin-moment")
+    else:
+        form = MomentCheckInForm()
+
+    return render(
+        request,
+        "entries/checkin_moment.html",
+        {
+            "form": form,
+            "recent_moments": MomentCheckIn.objects.all()[:10],
+            "now": timezone.localtime(),
+        },
+    )

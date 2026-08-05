@@ -37,11 +37,19 @@ class Entry(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     # Part 1: check-in
-    mental_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
-    physical_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
-    emotional_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
-    spiritual_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
-    checkin_notes = models.TextField(blank=True)
+    weather_summary = models.CharField(max_length=200, blank=True, help_text="Cached weather snapshot from the morning check-in.")
+
+    morning_mental_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
+    morning_physical_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
+    morning_emotional_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
+    morning_spiritual_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
+    one_percent_goal = models.TextField(blank=True, help_text="One small thing that would make today 1% better.")
+
+    evening_mental_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
+    evening_physical_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
+    evening_emotional_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
+    evening_spiritual_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
+    one_percent_goal_achieved = models.BooleanField(default=False)
 
     # Part 2: stoic guided journal
     stoic_prompt = models.ForeignKey(StoicPrompt, null=True, blank=True, on_delete=models.SET_NULL)
@@ -69,3 +77,68 @@ class Entry(models.Model):
 
     def get_absolute_url(self):
         return reverse("entries:detail", args=[self.pk])
+
+    def _blended_score(self, morning, evening):
+        values = [v for v in (morning, evening) if v is not None]
+        return round(sum(values) / len(values)) if values else None
+
+    @property
+    def mental_score(self):
+        return self._blended_score(self.morning_mental_score, self.evening_mental_score)
+
+    @property
+    def physical_score(self):
+        return self._blended_score(self.morning_physical_score, self.evening_physical_score)
+
+    @property
+    def emotional_score(self):
+        return self._blended_score(self.morning_emotional_score, self.evening_emotional_score)
+
+    @property
+    def spiritual_score(self):
+        return self._blended_score(self.morning_spiritual_score, self.evening_spiritual_score)
+
+
+class Goal(models.Model):
+    entry = models.ForeignKey(Entry, related_name="goals", on_delete=models.CASCADE)
+    text = models.CharField(max_length=300)
+    completed = models.BooleanField(default=False)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.text
+
+
+EMOTION_CHOICES = [
+    ("happy", "Happy"),
+    ("grateful", "Grateful"),
+    ("calm", "Calm"),
+    ("excited", "Excited"),
+    ("content", "Content"),
+    ("tired", "Tired"),
+    ("anxious", "Anxious"),
+    ("sad", "Sad"),
+    ("frustrated", "Frustrated"),
+    ("angry", "Angry"),
+    ("overwhelmed", "Overwhelmed"),
+    ("lonely", "Lonely"),
+]
+
+
+class MomentCheckIn(models.Model):
+    created_at = models.DateTimeField(default=timezone.now)
+    emotions = models.CharField(max_length=300, blank=True, help_text="Comma-separated emotion tags.")
+    note = models.TextField(blank=True, help_text="What are you feeling, and why?")
+    entry = models.ForeignKey(Entry, related_name="moments", null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def emotion_list(self):
+        return [e for e in self.emotions.split(",") if e]
+
+    def __str__(self):
+        return f"{self.created_at:%Y-%m-%d %H:%M} - {self.emotions}"

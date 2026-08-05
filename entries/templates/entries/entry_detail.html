@@ -6,13 +6,32 @@
 
     <section class="part">
         <h2>1. Check-in</h2>
+        {% if entry.weather_summary %}<p class="helptext">Weather: {{ entry.weather_summary }}</p>{% endif %}
         <p class="scores">
-            Mental: {{ entry.mental_score|default:"-" }}/10 &middot;
-            Physical: {{ entry.physical_score|default:"-" }}/10 &middot;
-            Emotional: {{ entry.emotional_score|default:"-" }}/10 &middot;
-            Spiritual: {{ entry.spiritual_score|default:"-" }}/10
+            Morning — Mental: {{ entry.morning_mental_score|default:"-" }}/10 &middot;
+            Physical: {{ entry.morning_physical_score|default:"-" }}/10 &middot;
+            Emotional: {{ entry.morning_emotional_score|default:"-" }}/10 &middot;
+            Spiritual: {{ entry.morning_spiritual_score|default:"-" }}/10
         </p>
-        {% if entry.checkin_notes %}<p>{{ entry.checkin_notes|linebreaksbr }}</p>{% endif %}
+        <p class="scores">
+            Evening — Mental: {{ entry.evening_mental_score|default:"-" }}/10 &middot;
+            Physical: {{ entry.evening_physical_score|default:"-" }}/10 &middot;
+            Emotional: {{ entry.evening_emotional_score|default:"-" }}/10 &middot;
+            Spiritual: {{ entry.evening_spiritual_score|default:"-" }}/10
+        </p>
+        {% if entry.goals.exists %}
+            <ul>
+                {% for goal in entry.goals.all %}
+                    <li>{% if goal.completed %}&#9745;{% else %}&#9744;{% endif %} {{ goal.text }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% if entry.one_percent_goal %}
+            <p class="prompt">
+                1% goal: {{ entry.one_percent_goal }} —
+                {% if entry.one_percent_goal_achieved %}achieved{% else %}not yet{% endif %}
+            </p>
+        {% endif %}
     </section>
 
     <section class="part">

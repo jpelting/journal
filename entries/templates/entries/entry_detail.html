@@ -44,6 +44,7 @@
         <h2>3. Biblical devotional</h2>
         {% if entry.devotional_prompt %}
             <p class="prompt">{{ entry.devotional_prompt.reference }}{% if entry.devotional_prompt.verse_text %} — {{ entry.devotional_prompt.verse_text }}{% endif %}</p>
+            {% if entry.devotional_prompt.verse_text %}<p class="helptext">{{ bible_attribution }}</p>{% endif %}
             <p class="prompt">{{ entry.devotional_prompt.reflection_prompt }}</p>
         {% endif %}
         <p>{{ entry.devotional_response|default:"—"|linebreaksbr }}</p>

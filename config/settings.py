@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -124,3 +125,16 @@ WEATHER_LOCATION_NAME = 'Mount Holly, NC'
 WEATHER_LATITUDE = 35.29819
 WEATHER_LONGITUDE = -81.01591
 WEATHER_TIMEZONE = 'America/New_York'
+
+
+# Bible passage lookups (devotional verse text), via the YouVersion Platform API.
+# Get an App Key at https://platform.youversion.com and set it as an env var —
+# never commit it.
+
+YVP_APP_KEY = os.environ.get('YVP_APP_KEY', '')
+BIBLE_VERSION_ID = '111'  # NIV
+BIBLE_VERSION_ATTRIBUTION = (
+    "Scripture quotations taken from The Holy Bible, New International Version® NIV® "
+    "Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by permission. "
+    "All rights reserved worldwide."
+)

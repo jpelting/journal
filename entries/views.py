@@ -29,6 +29,16 @@ class EntryDetailView(DetailView):
     model = Entry
     context_object_name = "entry"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["bible_attribution"] = settings.BIBLE_VERSION_ATTRIBUTION
+        return context
+
+
+def _resolve_prompt(form, field_name, model):
+    pk = form[field_name].value()
+    return model.objects.filter(pk=pk).first() if pk else None
+
 
 class EntryFormMixin:
     model = Entry
@@ -37,12 +47,10 @@ class EntryFormMixin:
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["stoic_prompt_obj"] = self._resolve_stoic_prompt(context["form"])
+        context["stoic_prompt_obj"] = _resolve_prompt(context["form"], "stoic_prompt", StoicPrompt)
+        context["devotional_prompt_obj"] = _resolve_prompt(context["form"], "devotional_prompt", DevotionalPrompt)
+        context["bible_attribution"] = settings.BIBLE_VERSION_ATTRIBUTION
         return context
-
-    def _resolve_stoic_prompt(self, form):
-        pk = form["stoic_prompt"].value()
-        return StoicPrompt.objects.filter(pk=pk).first() if pk else None
 
 
 class EntryCreateView(EntryFormMixin, CreateView):

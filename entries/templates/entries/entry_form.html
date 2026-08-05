@@ -35,6 +35,14 @@
 
         <section class="part tab-section" id="tab-devotional">
             <h2>Biblical devotional</h2>
+            {% if devotional_prompt_obj %}
+                <p class="prompt">
+                    {{ devotional_prompt_obj.reference }}
+                    {% if devotional_prompt_obj.verse_text %}<br>{{ devotional_prompt_obj.verse_text }}{% endif %}
+                </p>
+                {% if devotional_prompt_obj.verse_text %}<p class="helptext">{{ bible_attribution }}</p>{% endif %}
+                <p class="prompt">{{ devotional_prompt_obj.reflection_prompt }}</p>
+            {% endif %}
             <label for="{{ form.devotional_prompt.id_for_label }}">Passage</label>
             {{ form.devotional_prompt }}
             <label for="{{ form.devotional_response.id_for_label }}">Your reflection</label>

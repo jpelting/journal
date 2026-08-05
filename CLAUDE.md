@@ -17,15 +17,19 @@ venv/Scripts/python.exe manage.py test entries.tests.SomeTestCase.test_name  # s
 venv/Scripts/python.exe manage.py makemigrations entries
 venv/Scripts/python.exe manage.py migrate
 venv/Scripts/python.exe manage.py check
-venv/Scripts/python.exe manage.py seed_stoic_prompts   # idempotent load from entries/data/stoic_prompts.json
+venv/Scripts/python.exe manage.py seed_stoic_prompts       # idempotent load from entries/data/stoic_prompts.json
+venv/Scripts/python.exe manage.py seed_devotional_prompts  # idempotent load from entries/data/devotional_prompts.json
 ```
 
 There is no `requirements.txt` — the venv already has Django, asgiref, sqlparse, tzdata installed. If dependencies need to change, update the venv directly (`venv/Scripts/pip.exe install ...`) since there's currently no manifest to keep in sync.
+
+`entries/bible.py` calls the real YouVersion Platform API (`api.youversion.com`), which needs a free App Key from https://platform.youversion.com. Set it as an env var before running anything that creates `DevotionalPrompt` rows: `YVP_APP_KEY=... venv/Scripts/python.exe manage.py ...`. Without it, verse-text fetches silently no-op (see below) — the app still works, prompts just show without verse text.
 
 ## Architecture
 
 - Single app (`entries`) plus the `config` project package (settings/urls/wsgi/asgi) — no other apps.
 - `config/settings.py` has a `WEATHER_*` block (lat/long/timezone) consumed by `entries/weather.py`, which does a best-effort call to the Open-Meteo API on the morning check-in page and swallows all failures (returns `None` rather than raising), since it's a fire-and-forget enrichment on a page render, not something that should ever break the check-in flow.
+- Similarly, `entries/bible.py` does a best-effort call to the YouVersion Platform API to fetch `DevotionalPrompt.verse_text` for a human reference (e.g. `"Philippians 4:6-7"` → USFM `PHP.4.6-7` → live NIV text); it returns `None` on any parse/auth/network failure rather than raising. Unlike weather (fetched per-entry in a view), this is invoked at the point a `DevotionalPrompt` is created — from `DevotionalPromptAdmin.save_model` and from `seed_devotional_prompts` — and cached onto the shared `DevotionalPrompt` row rather than re-fetched per `Entry`. Bible-API display requires the copyright line in `settings.BIBLE_VERSION_ATTRIBUTION` to be shown alongside any verse text (see `entry_form.html`/`entry_detail.html`); the reading-plan *day-by-day reference lists themselves* have no public API — bible.com's plan pages are client-rendered — so those are hand-curated in `entries/data/devotional_prompts.json`, same as the Stoic prompts.
 - `Entry` stores separate `morning_*_score` and `evening_*_score` fields per dimension (mental/physical/emotional/spiritual); the blended `mental_score`/`physical_score`/etc. properties average whichever of the two are present. Use the blended properties for display (e.g. calendar mood coloring); use the raw morning/evening fields in the check-in forms.
 - `Goal` is a per-entry to-do list (the "1% better" goals), edited via two different formsets over the same model depending on time of day: `GoalFormSet` (add/edit/delete text, used in the morning) and `GoalCompletionFormSet` (toggle `completed` only, used in the evening).
 - The three check-in views (`checkin_morning_view`, `checkin_evening_view`, `checkin_moment_view`) all get-or-create today's `Entry` via `_today_entry()` and share the `_checkin_tabs.html` partial for navigation between them; `checkin_view` is just a redirect to the morning tab.

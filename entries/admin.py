@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+from .bible import get_passage_text
 from .models import DevotionalPrompt, Entry, Goal, MomentCheckIn, StoicPrompt
 
 
@@ -79,6 +80,13 @@ class StoicPromptAdmin(admin.ModelAdmin):
 class DevotionalPromptAdmin(admin.ModelAdmin):
     list_display = ["reference", "active"]
     list_filter = ["active"]
+
+    def save_model(self, request, obj, form, change):
+        if not obj.verse_text and obj.reference:
+            fetched = get_passage_text(obj.reference)
+            if fetched:
+                obj.verse_text = fetched
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(MomentCheckIn)

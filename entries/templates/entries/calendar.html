@@ -1,0 +1,42 @@
+{% extends "entries/base.html" %}
+{% block title %}{{ month_name }} {{ year }} - Journal{% endblock %}
+{% block content %}
+    <h1>{{ month_name }} {{ year }}</h1>
+    <div class="calendar-nav">
+        <a href="{% url 'entries:calendar' prev_year prev_month %}">&laquo; Prev</a>
+        <a href="{% url 'entries:calendar' %}">Today</a>
+        <a href="{% url 'entries:calendar' next_year next_month %}">Next &raquo;</a>
+    </div>
+
+    <table class="calendar">
+        <thead>
+            <tr>
+                {% for label in weekday_labels %}<th>{{ label }}</th>{% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in weeks %}
+                <tr>
+                    {% for day in week %}
+                        {% if day %}
+                            <td class="cal-day{% if day.is_today %} today{% endif %}"{% if day.bg_color %} style="background:{{ day.bg_color }};"{% endif %}>
+                                {% if day.entry %}
+                                    <a href="{{ day.entry.get_absolute_url }}">{{ day.day }}</a>
+                                    <div class="cal-scores">
+                                        {% if day.entry.mental_score %}M{{ day.entry.mental_score }} {% endif %}
+                                        {% if day.entry.physical_score %}P{{ day.entry.physical_score }} {% endif %}
+                                        {% if day.entry.emotional_score %}E{{ day.entry.emotional_score }}{% endif %}
+                                    </div>
+                                {% else %}
+                                    <a class="cal-add" href="{% url 'entries:create' %}?date={{ day.date|date:'Y-m-d' }}">{{ day.day }}</a>
+                                {% endif %}
+                            </td>
+                        {% else %}
+                            <td class="cal-empty"></td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

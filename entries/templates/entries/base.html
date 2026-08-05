@@ -56,11 +56,21 @@
         }
         .prompt { font-style: italic; color: #5b4636; margin-top: 0.25rem; }
         .helptext { font-size: 0.85rem; color: #888; }
+        .calendar-nav { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+        table.calendar { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.calendar th { padding: 0.4rem 0; font-size: 0.8rem; color: #7a6a55; border-bottom: 1px solid #ddd6c8; }
+        table.calendar td { border: 1px solid #eee2cf; height: 4.5rem; vertical-align: top; padding: 0.3rem; }
+        table.calendar td.cal-empty { background: #f3efe4; border-color: #f3efe4; }
+        table.calendar td.today { outline: 2px solid #5b4636; outline-offset: -2px; }
+        table.calendar td a { text-decoration: none; font-weight: bold; color: #2b2b28; }
+        table.calendar td .cal-add { color: #a99c86; font-weight: normal; }
+        table.calendar .cal-scores { font-size: 0.7rem; color: #5b4636; margin-top: 0.2rem; }
     </style>
 </head>
 <body>
     <nav>
         <a href="{% url 'entries:list' %}">All entries</a>
+        <a href="{% url 'entries:calendar' %}">Calendar</a>
         <a href="{% url 'entries:create' %}">New entry</a>
         <a href="/admin/">Admin</a>
     </nav>

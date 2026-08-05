@@ -27,13 +27,21 @@ class EntryCreateView(EntryFormMixin, CreateView):
     def get_initial(self):
         initial = super().get_initial()
         initial["date"] = timezone.localdate()
-        stoic = StoicPrompt.objects.filter(active=True).order_by("?").first()
+        stoic = self._next_stoic_prompt()
         devotional = DevotionalPrompt.objects.filter(active=True).order_by("?").first()
         if stoic:
             initial["stoic_prompt"] = stoic
         if devotional:
             initial["devotional_prompt"] = devotional
         return initial
+
+    def _next_stoic_prompt(self):
+        active = StoicPrompt.objects.filter(active=True)
+        used_ids = Entry.objects.exclude(stoic_prompt__isnull=True).values_list("stoic_prompt_id", flat=True)
+        unused = active.exclude(id__in=used_ids)
+        # Once every active prompt has appeared in some entry, the cycle resets.
+        pool = unused if unused.exists() else active
+        return pool.order_by("?").first()
 
 
 class EntryUpdateView(EntryFormMixin, UpdateView):

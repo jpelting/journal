@@ -2,11 +2,18 @@
 {% block title %}Morning Check-in - Journal{% endblock %}
 {% block content %}
     {% include "entries/_checkin_tabs.html" with active_tab="morning" %}
-    <h1>Morning Check-in</h1>
-    <p class="checkin-meta">
-        {{ now|date:"l, F j" }} &middot; {{ now|date:"g:i A" }}
-        {% if entry.weather_summary %} &middot; {{ entry.weather_summary }} in {{ weather_location }}{% endif %}
-    </p>
+    <div class="checkin-header">
+        <h1>Morning Check-in</h1>
+        <p class="checkin-meta">{{ now|date:"l, F j" }} &middot; {{ now|date:"g:i A" }}</p>
+        {% if entry.weather_summary %}
+            {% if weather_animation %}
+                <div class="weather-anim-wrap">
+                    {% include "entries/_weather_animation.html" with category=weather_animation %}
+                </div>
+            {% endif %}
+            <p class="checkin-meta">{{ entry.weather_summary }} in {{ weather_location }}</p>
+        {% endif %}
+    </div>
 
     <form method="post" novalidate>
         {% csrf_token %}

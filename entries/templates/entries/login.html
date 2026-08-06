@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log in - Journal</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            color: #2b2b28;
+            background: #fbf9f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .login-card {
+            background: #fff;
+            border: 1px solid #ddd6c8;
+            border-radius: 8px;
+            padding: 2rem 2.25rem;
+            width: 100%;
+            max-width: 320px;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-size: 1.3rem;
+            margin: 0 0 1.5rem;
+            color: #5b4636;
+            text-align: center;
+        }
+        label { display: block; margin-top: 0.75rem; font-weight: bold; }
+        input[type=text], input[type=password] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.4rem;
+            margin-top: 0.25rem;
+            font-family: inherit;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            margin-top: 1.5rem;
+            padding: 0.6rem 1.2rem;
+            background: #5b4636;
+            color: #fff;
+            text-decoration: none;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .errorlist { color: #a33; list-style: none; padding: 0; margin: 0.75rem 0 0; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1>Journal</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <label for="{{ form.username.id_for_label }}">Username</label>
+            {{ form.username }}
+            {{ form.username.errors }}
+            <label for="{{ form.password.id_for_label }}">Password</label>
+            {{ form.password }}
+            {{ form.password.errors }}
+            <input type="hidden" name="next" value="{{ next }}">
+            <button type="submit" class="btn">Log in</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -36,6 +36,38 @@ WEATHER_CODES = {
 }
 
 
+WEATHER_ANIMATIONS = {
+    0: "sunny",
+    1: "sunny",
+    2: "cloudy",
+    3: "cloudy",
+    45: "fog",
+    48: "fog",
+    51: "rain",
+    53: "rain",
+    55: "rain",
+    56: "rain",
+    57: "rain",
+    61: "rain",
+    63: "rain",
+    65: "rain",
+    66: "rain",
+    67: "rain",
+    71: "snow",
+    73: "snow",
+    75: "snow",
+    77: "snow",
+    80: "rain",
+    81: "rain",
+    82: "rain",
+    85: "snow",
+    86: "snow",
+    95: "storm",
+    96: "storm",
+    99: "storm",
+}
+
+
 def get_current_weather():
     """Fetch a short "72°F, Partly cloudy" style summary, or None on any failure.
 
@@ -62,3 +94,20 @@ def get_current_weather():
         return f"{temperature}°F, {description}"
     except Exception:
         return None
+
+
+def weather_animation_for_summary(summary):
+    """Map a cached "72°F, Partly cloudy" summary back to an animation category.
+
+    entries.Entry only stores the formatted summary string, not the raw
+    weather_code, so this matches the description half against WEATHER_CODES
+    to recover it. Returns None if summary is empty or doesn't match any
+    known description (e.g. old cached data from before a code was added).
+    """
+    if not summary or ", " not in summary:
+        return None
+    description = summary.split(", ", 1)[1]
+    for code, text in WEATHER_CODES.items():
+        if text == description:
+            return WEATHER_ANIMATIONS.get(code)
+    return None

@@ -5,7 +5,9 @@ from . import views
 app_name = "entries"
 
 urlpatterns = [
-    path("", views.EntryListView.as_view(), name="list"),
+    path("", views.checkin_view, name="home"),
+    path("all/", views.EntryListView.as_view(), name="list"),
+    path("all/<str:journal_type>/", views.JournalTypeListView.as_view(), name="journal-type"),
     path("new/", views.EntryCreateView.as_view(), name="create"),
     path("calendar/", views.calendar_view, name="calendar"),
     path("calendar/<int:year>/<int:month>/", views.calendar_view, name="calendar"),

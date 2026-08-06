@@ -1,0 +1,38 @@
+{% extends "entries/base.html" %}
+{% block title %}{{ journal_label }} - Journal{% endblock %}
+{% block content %}
+    <p><a href="{% url 'entries:list' %}">&laquo; Back to Journals</a></p>
+    <h1>{{ journal_label }}</h1>
+    {% if new_entry_url %}
+        <p><a class="btn" href="{{ new_entry_url }}">+ New entry</a></p>
+    {% endif %}
+    {% if entries %}
+        <ul class="entry-list">
+            {% for entry in entries %}
+                <li>
+                    <a href="{{ entry.get_absolute_url }}"><strong>{{ entry.date }}</strong></a>
+                    <div class="scores">
+                        {% if journal_type == "stoic" %}
+                            {{ entry.stoic_response|truncatewords:30 }}
+                        {% elif journal_type == "devotional" %}
+                            {{ entry.devotional_response|truncatewords:30 }}
+                        {% elif journal_type == "freeform" %}
+                            {{ entry.freeform_entry|truncatewords:30 }}
+                        {% elif journal_type == "exercise" %}
+                            {{ entry.exercise_type|default:"Exercise" }}{% if entry.exercise_duration_minutes %} &middot; {{ entry.exercise_duration_minutes }} min{% endif %}
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+        {% if is_paginated %}
+            <p>
+                {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">&laquo; Newer</a>{% endif %}
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Older &raquo;</a>{% endif %}
+            </p>
+        {% endif %}
+    {% else %}
+        <p>No entries yet for this section.</p>
+    {% endif %}
+{% endblock %}

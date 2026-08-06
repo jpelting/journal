@@ -1,30 +1,13 @@
 {% extends "entries/base.html" %}
-{% block title %}All entries - Journal{% endblock %}
+{% block title %}Journals{% endblock %}
 {% block content %}
-    <h1>Journal entries</h1>
-    <p><a class="btn" href="{% url 'entries:create' %}">+ New entry</a></p>
-    {% if entries %}
-        <ul class="entry-list">
-            {% for entry in entries %}
-                <li>
-                    <a href="{{ entry.get_absolute_url }}"><strong>{{ entry.date }}</strong></a>
-                    <div class="scores">
-                        {% if entry.mental_score %}Mental {{ entry.mental_score }}/10 &middot; {% endif %}
-                        {% if entry.physical_score %}Physical {{ entry.physical_score }}/10 &middot; {% endif %}
-                        {% if entry.emotional_score %}Emotional {{ entry.emotional_score }}/10 &middot; {% endif %}
-                        {% if entry.spiritual_score %}Spiritual {{ entry.spiritual_score }}/10{% endif %}
-                    </div>
-                </li>
-            {% endfor %}
-        </ul>
-        {% if is_paginated %}
-            <p>
-                {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">&laquo; Newer</a>{% endif %}
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Older &raquo;</a>{% endif %}
-            </p>
-        {% endif %}
-    {% else %}
-        <p>No entries yet. Start your first one above.</p>
-    {% endif %}
+    <h1 class="journals-title">Journals</h1>
+    <div class="journal-tiles">
+        {% for type_key, type_info in journal_types.items %}
+            <a class="journal-tile" href="{% url 'entries:journal-type' journal_type=type_key %}">
+                <h2>{{ type_info.label }}</h2>
+                <p class="helptext">{{ type_info.description }}</p>
+            </a>
+        {% endfor %}
+    </div>
 {% endblock %}

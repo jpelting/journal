@@ -1,0 +1,60 @@
+{% if category == "sunny" %}
+    <svg class="weather-anim" viewBox="0 0 64 64" width="62" height="62" aria-hidden="true">
+        <g class="w-sun-rays">
+            <g stroke="#e8a13a" stroke-width="3" stroke-linecap="round">
+                <line x1="32" y1="4" x2="32" y2="14"/>
+                <line x1="32" y1="50" x2="32" y2="60"/>
+                <line x1="4" y1="32" x2="14" y2="32"/>
+                <line x1="50" y1="32" x2="60" y2="32"/>
+                <line x1="12" y1="12" x2="19" y2="19"/>
+                <line x1="45" y1="45" x2="52" y2="52"/>
+                <line x1="12" y1="52" x2="19" y2="45"/>
+                <line x1="45" y1="19" x2="52" y2="12"/>
+            </g>
+        </g>
+        <circle class="w-sun-disc" cx="32" cy="32" r="11" fill="#e8a13a"/>
+    </svg>
+{% elif category == "cloudy" %}
+    <svg class="weather-anim" viewBox="0 0 64 64" width="62" height="62" aria-hidden="true">
+        <ellipse class="w-cloud-back" cx="24" cy="34" rx="13" ry="9" fill="#cfd6de"/>
+        <g class="w-cloud-front">
+            <ellipse cx="38" cy="30" rx="16" ry="12" fill="#e9edf2"/>
+            <ellipse cx="25" cy="35" rx="10" ry="8" fill="#e9edf2"/>
+        </g>
+    </svg>
+{% elif category == "rain" %}
+    <svg class="weather-anim" viewBox="0 0 64 64" width="62" height="62" aria-hidden="true">
+        <ellipse cx="32" cy="24" rx="18" ry="11" fill="#b7c1cc"/>
+        <g stroke="#5b8cae" stroke-width="3" stroke-linecap="round">
+            <line class="w-drop w-drop-1" x1="21" y1="38" x2="18" y2="46"/>
+            <line class="w-drop w-drop-2" x1="32" y1="40" x2="29" y2="50"/>
+            <line class="w-drop w-drop-3" x1="43" y1="38" x2="40" y2="46"/>
+        </g>
+    </svg>
+{% elif category == "snow" %}
+    <svg class="weather-anim" viewBox="0 0 64 64" width="62" height="62" aria-hidden="true">
+        <ellipse cx="32" cy="24" rx="18" ry="11" fill="#c7ccd3"/>
+        <g fill="#fff" stroke="#c7ccd3" stroke-width="1">
+            <circle class="w-flake w-flake-1" cx="21" cy="40" r="2.5"/>
+            <circle class="w-flake w-flake-2" cx="32" cy="44" r="2.5"/>
+            <circle class="w-flake w-flake-3" cx="43" cy="40" r="2.5"/>
+        </g>
+    </svg>
+{% elif category == "fog" %}
+    <svg class="weather-anim" viewBox="0 0 64 64" width="62" height="62" aria-hidden="true">
+        <g stroke="#a9b2ba" stroke-width="4" stroke-linecap="round">
+            <line class="w-fog-line w-fog-1" x1="10" y1="22" x2="54" y2="22"/>
+            <line class="w-fog-line w-fog-2" x1="14" y1="32" x2="58" y2="32"/>
+            <line class="w-fog-line w-fog-3" x1="8" y1="42" x2="50" y2="42"/>
+        </g>
+    </svg>
+{% elif category == "storm" %}
+    <svg class="weather-anim" viewBox="0 0 64 64" width="62" height="62" aria-hidden="true">
+        <ellipse cx="32" cy="22" rx="18" ry="10" fill="#8f97a3"/>
+        <polygon class="w-bolt" points="34,28 26,44 32,44 28,56 42,36 34,36" fill="#f4c542"/>
+        <g stroke="#5b8cae" stroke-width="3" stroke-linecap="round">
+            <line class="w-drop w-drop-1" x1="18" y1="38" x2="15" y2="46"/>
+            <line class="w-drop w-drop-2" x1="47" y1="38" x2="44" y2="46"/>
+        </g>
+    </svg>
+{% endif %}

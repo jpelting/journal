@@ -1,18 +1,21 @@
 {% extends "entries/base.html" %}
 {% block title %}{% if form.instance.pk %}Edit entry{% else %}New entry{% endif %} - Journal{% endblock %}
 {% block content %}
-    <nav class="checkin-tabs entry-tabs">
-        <a href="#" data-tab="stoic" class="active">Stoic Journal</a>
-        <a href="#" data-tab="devotional">Devotional</a>
-        <a href="#" data-tab="freeform">Freeform</a>
-        <a href="#" data-tab="exercise">Exercise</a>
-    </nav>
+    {% if not form_journal_type %}
+        <nav class="checkin-tabs entry-tabs">
+            <a href="#" data-tab="stoic" class="active">Stoic Journal</a>
+            <a href="#" data-tab="devotional">Devotional</a>
+            <a href="#" data-tab="freeform">Freeform</a>
+            <a href="#" data-tab="exercise">Exercise</a>
+        </nav>
+    {% endif %}
 
     <h1>{% if form.instance.pk %}Edit entry — {{ form.instance.date }}{% else %}New journal entry{% endif %}</h1>
 
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form.non_field_errors }}
+        {% if form_journal_type %}<input type="hidden" name="type" value="{{ form_journal_type }}">{% endif %}
 
         <label for="{{ form.date.id_for_label }}">Date</label>
         {{ form.date }}
@@ -20,7 +23,7 @@
 
         <p class="helptext">Daily check-in (scores, goals, weather) now lives on the <a href="{% url 'entries:checkin' %}">Check-in</a> page.</p>
 
-        <section class="part tab-section active" id="tab-stoic">
+        <section class="part tab-section{% if active_section == "stoic" %} active{% endif %}" id="tab-stoic">
             <h2>Stoic guided journal</h2>
             {% if stoic_prompt_obj %}
                 <p class="prompt">
@@ -35,7 +38,7 @@
             {{ form.stoic_response }}
         </section>
 
-        <section class="part tab-section" id="tab-devotional">
+        <section class="part tab-section{% if active_section == "devotional" %} active{% endif %}" id="tab-devotional">
             <h2>Biblical devotional</h2>
             {% if devotional_prompt_obj %}
                 <p class="prompt">
@@ -51,13 +54,13 @@
             {{ form.devotional_response }}
         </section>
 
-        <section class="part tab-section" id="tab-freeform">
+        <section class="part tab-section{% if active_section == "freeform" %} active{% endif %}" id="tab-freeform">
             <h2>Freeform journal</h2>
             <label for="{{ form.freeform_entry.id_for_label }}">Mental / emotional dump</label>
             {{ form.freeform_entry }}
         </section>
 
-        <section class="part tab-section" id="tab-exercise">
+        <section class="part tab-section{% if active_section == "exercise" %} active{% endif %}" id="tab-exercise">
             <h2>Exercise</h2>
             <label for="{{ form.exercise_completed.id_for_label }}">
                 {{ form.exercise_completed }} Completed today
@@ -72,6 +75,10 @@
 
         <button class="btn" type="submit">Save entry</button>
     </form>
+
+    {% if form_journal_type %}
+        <p><a class="btn" href="{% url 'entries:journal-type' journal_type=form_journal_type %}">View previous entries</a></p>
+    {% endif %}
 
     <script>
         document.querySelectorAll('.entry-tabs a').forEach(function (tab) {

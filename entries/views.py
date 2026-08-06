@@ -2,10 +2,12 @@ import calendar
 from datetime import date
 
 from django.conf import settings
+from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
 
 from .forms import (
     EntryForm,
@@ -16,13 +18,78 @@ from .forms import (
     MorningCheckInForm,
 )
 from .models import DevotionalPrompt, Entry, MomentCheckIn, StoicPrompt
-from .weather import get_current_weather
+from .weather import get_current_weather, weather_animation_for_summary
+
+JOURNAL_TYPES = {
+    "stoic": {"label": "Stoic Reflections", "description": "Guided reflections on Stoic quotes and prompts."},
+    "devotional": {"label": "Devotionals", "description": "Scripture-based devotional responses."},
+    "freeform": {"label": "Freeform Journal", "description": "Open-ended daily journal entries."},
+    "exercise": {"label": "Exercise Log", "description": "Workout type, duration, and notes."},
+}
 
 
-class EntryListView(ListView):
+def _next_stoic_prompt():
+    active = StoicPrompt.objects.filter(active=True)
+    used_ids = Entry.objects.exclude(stoic_prompt__isnull=True).values_list("stoic_prompt_id", flat=True)
+    unused = active.exclude(id__in=used_ids)
+    # Once every active prompt has appeared in some entry, the cycle resets.
+    pool = unused if unused.exists() else active
+    return pool.order_by("?").first()
+
+
+def _next_devotional_prompt():
+    return DevotionalPrompt.objects.filter(active=True).order_by("?").first()
+
+
+# journal_type -> (Entry FK field holding its prompt, function picking the next one)
+_PROMPT_PICKERS = {
+    "stoic": ("stoic_prompt", _next_stoic_prompt),
+    "devotional": ("devotional_prompt", _next_devotional_prompt),
+}
+
+
+class EntryListView(TemplateView):
+    template_name = "entries/entry_list.html"
+    extra_context = {"journal_types": JOURNAL_TYPES}
+
+
+class JournalTypeListView(ListView):
     model = Entry
     context_object_name = "entries"
     paginate_by = 30
+    template_name = "entries/journal_type_list.html"
+
+    def get_queryset(self):
+        journal_type = self.kwargs["journal_type"]
+        if journal_type not in JOURNAL_TYPES:
+            raise Http404
+        if journal_type == "stoic":
+            return Entry.objects.exclude(stoic_response="")
+        if journal_type == "devotional":
+            return Entry.objects.exclude(devotional_response="")
+        if journal_type == "freeform":
+            return Entry.objects.exclude(freeform_entry="")
+        return Entry.objects.filter(Q(exercise_completed=True) | ~Q(exercise_type=""))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        journal_type = self.kwargs["journal_type"]
+        context["journal_type"] = journal_type
+        context["journal_label"] = JOURNAL_TYPES[journal_type]["label"]
+        today_entry = Entry.objects.filter(date=timezone.localdate()).first()
+        if today_entry and journal_type in _PROMPT_PICKERS:
+            field_name, pick_prompt = _PROMPT_PICKERS[journal_type]
+            if getattr(today_entry, f"{field_name}_id") is None:
+                prompt = pick_prompt()
+                if prompt:
+                    setattr(today_entry, field_name, prompt)
+                    today_entry.save(update_fields=[field_name])
+
+        if today_entry:
+            context["new_entry_url"] = f"{reverse('entries:edit', args=[today_entry.pk])}?type={journal_type}"
+        else:
+            context["new_entry_url"] = f"{reverse('entries:create')}?type={journal_type}"
+        return context
 
 
 class EntryDetailView(DetailView):
@@ -45,11 +112,17 @@ class EntryFormMixin:
     form_class = EntryForm
     template_name = "entries/entry_form.html"
 
+    def _journal_type_param(self):
+        value = self.request.GET.get("type") or self.request.POST.get("type")
+        return value if value in JOURNAL_TYPES else None
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["stoic_prompt_obj"] = _resolve_prompt(context["form"], "stoic_prompt", StoicPrompt)
         context["devotional_prompt_obj"] = _resolve_prompt(context["form"], "devotional_prompt", DevotionalPrompt)
         context["bible_attribution"] = settings.BIBLE_VERSION_ATTRIBUTION
+        context["form_journal_type"] = self._journal_type_param()
+        context["active_section"] = context["form_journal_type"] or "stoic"
         return context
 
 
@@ -57,21 +130,13 @@ class EntryCreateView(EntryFormMixin, CreateView):
     def get_initial(self):
         initial = super().get_initial()
         initial["date"] = self.request.GET.get("date") or timezone.localdate()
-        stoic = self._next_stoic_prompt()
-        devotional = DevotionalPrompt.objects.filter(active=True).order_by("?").first()
+        stoic = _next_stoic_prompt()
+        devotional = _next_devotional_prompt()
         if stoic:
             initial["stoic_prompt"] = stoic
         if devotional:
             initial["devotional_prompt"] = devotional
         return initial
-
-    def _next_stoic_prompt(self):
-        active = StoicPrompt.objects.filter(active=True)
-        used_ids = Entry.objects.exclude(stoic_prompt__isnull=True).values_list("stoic_prompt_id", flat=True)
-        unused = active.exclude(id__in=used_ids)
-        # Once every active prompt has appeared in some entry, the cycle resets.
-        pool = unused if unused.exists() else active
-        return pool.order_by("?").first()
 
 
 class EntryUpdateView(EntryFormMixin, UpdateView):
@@ -81,13 +146,33 @@ class EntryUpdateView(EntryFormMixin, UpdateView):
 WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 
+MOOD_BANDS = [
+    (2, "hsl(10, 45%, 85%)"),   # red: 1-2
+    (5, "hsl(30, 45%, 85%)"),   # orange: 3-5
+    (7, "hsl(50, 45%, 85%)"),   # yellow: 6-7
+    (10, "hsl(110, 45%, 85%)"),  # green: 8-10
+]
+
+
 def _mood_color(entry):
-    scores = [s for s in (entry.mental_score, entry.physical_score, entry.emotional_score) if s is not None]
-    if not scores:
+    scores = [
+        entry.morning_mental_score,
+        entry.evening_mental_score,
+        entry.morning_physical_score,
+        entry.evening_physical_score,
+        entry.morning_emotional_score,
+        entry.evening_emotional_score,
+        entry.morning_spiritual_score,
+        entry.evening_spiritual_score,
+    ]
+    present = [s for s in scores if s is not None]
+    if not present:
         return None
-    avg = sum(scores) / len(scores)
-    hue = 10 + (avg - 1) / 9 * 100  # 1 -> reddish, 10 -> greenish
-    return f"hsl({hue:.0f}, 45%, 85%)"
+    avg = sum(present) / len(present)
+    for ceiling, color in MOOD_BANDS:
+        if avg <= ceiling:
+            return color
+    return MOOD_BANDS[-1][1]
 
 
 def calendar_view(request, year=None, month=None):
@@ -173,6 +258,7 @@ def checkin_morning_view(request):
             "goal_formset": goal_formset,
             "now": timezone.localtime(),
             "weather_location": settings.WEATHER_LOCATION_NAME,
+            "weather_animation": weather_animation_for_summary(entry.weather_summary),
         },
     )
 

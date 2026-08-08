@@ -1,13 +1,16 @@
 import calendar
 from datetime import date
+from io import BytesIO
 
 from django.conf import settings
-from django.db.models import Q
-from django.http import Http404
+from django.contrib import messages
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
+from xhtml2pdf import pisa
 
 from .forms import (
     EntryForm,
@@ -17,14 +20,14 @@ from .forms import (
     MomentCheckInForm,
     MorningCheckInForm,
 )
-from .models import DevotionalPrompt, Entry, MomentCheckIn, StoicPrompt
+from .models import DevotionalPrompt, Entry, IntrospectionPrompt, MomentCheckIn, StoicPrompt
 from .weather import get_current_weather, weather_animation_for_summary
 
 JOURNAL_TYPES = {
     "stoic": {"label": "Stoic Reflections", "description": "Guided reflections on Stoic quotes and prompts."},
     "devotional": {"label": "Devotionals", "description": "Scripture-based devotional responses."},
     "freeform": {"label": "Freeform Journal", "description": "Open-ended daily journal entries."},
-    "exercise": {"label": "Exercise Log", "description": "Workout type, duration, and notes."},
+    "introspection": {"label": "Introspection", "description": "A daily reflection question, one for each day of the year."},
 }
 
 
@@ -48,6 +51,19 @@ _PROMPT_PICKERS = {
 }
 
 
+def _entries_for_journal_type(journal_type):
+    """All entries, or entries with non-blank content for one JOURNAL_TYPES section."""
+    if journal_type == "stoic":
+        return Entry.objects.exclude(stoic_response="")
+    if journal_type == "devotional":
+        return Entry.objects.exclude(devotional_response="")
+    if journal_type == "freeform":
+        return Entry.objects.exclude(freeform_entry="")
+    if journal_type == "introspection":
+        return Entry.objects.exclude(introspection_response="")
+    return Entry.objects.all()
+
+
 class EntryListView(TemplateView):
     template_name = "entries/entry_list.html"
     extra_context = {"journal_types": JOURNAL_TYPES}
@@ -63,13 +79,7 @@ class JournalTypeListView(ListView):
         journal_type = self.kwargs["journal_type"]
         if journal_type not in JOURNAL_TYPES:
             raise Http404
-        if journal_type == "stoic":
-            return Entry.objects.exclude(stoic_response="")
-        if journal_type == "devotional":
-            return Entry.objects.exclude(devotional_response="")
-        if journal_type == "freeform":
-            return Entry.objects.exclude(freeform_entry="")
-        return Entry.objects.filter(Q(exercise_completed=True) | ~Q(exercise_type=""))
+        return _entries_for_journal_type(journal_type)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -107,6 +117,13 @@ def _resolve_prompt(form, field_name, model):
     return model.objects.filter(pk=pk).first() if pk else None
 
 
+def _form_date(form):
+    value = form["date"].value()
+    if isinstance(value, str):
+        return date.fromisoformat(value)
+    return value or timezone.localdate()
+
+
 class EntryFormMixin:
     model = Entry
     form_class = EntryForm
@@ -120,6 +137,7 @@ class EntryFormMixin:
         context = super().get_context_data(**kwargs)
         context["stoic_prompt_obj"] = _resolve_prompt(context["form"], "stoic_prompt", StoicPrompt)
         context["devotional_prompt_obj"] = _resolve_prompt(context["form"], "devotional_prompt", DevotionalPrompt)
+        context["introspection_prompt_obj"] = IntrospectionPrompt.for_date(_form_date(context["form"]))
         context["bible_attribution"] = settings.BIBLE_VERSION_ATTRIBUTION
         context["form_journal_type"] = self._journal_type_param()
         context["active_section"] = context["form_journal_type"] or "stoic"
@@ -316,3 +334,56 @@ def checkin_moment_view(request):
             "now": timezone.localtime(),
         },
     )
+
+
+def _clean_journal_type(value):
+    return value if value in JOURNAL_TYPES else None
+
+
+class EntryExportSelectView(ListView):
+    model = Entry
+    context_object_name = "entries"
+    template_name = "entries/export_select.html"
+
+    def get_queryset(self):
+        return _entries_for_journal_type(_clean_journal_type(self.request.GET.get("type")))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["journal_types"] = JOURNAL_TYPES
+        context["selected_type"] = _clean_journal_type(self.request.GET.get("type")) or ""
+        return context
+
+
+def export_pdf_view(request):
+    ids = request.POST.getlist("ids") or request.GET.getlist("ids")
+    journal_type = _clean_journal_type(request.POST.get("type") or request.GET.get("type"))
+    entries = Entry.objects.filter(pk__in=ids).order_by("date")
+
+    if not entries.exists():
+        messages.error(request, "No entries selected to export.")
+        return redirect("entries:export")
+
+    html = render_to_string(
+        "entries/pdf_export.html",
+        {
+            "entries": entries,
+            "bible_attribution": settings.BIBLE_VERSION_ATTRIBUTION,
+            "journal_type": journal_type,
+        },
+    )
+
+    buffer = BytesIO()
+    pisa.CreatePDF(html, dest=buffer)
+
+    start, end = entries.first().date, entries.last().date
+    type_prefix = f"{journal_type}_" if journal_type else ""
+    filename = (
+        f"journal_{type_prefix}{start.isoformat()}.pdf"
+        if start == end
+        else f"journal_{type_prefix}{start.isoformat()}_to_{end.isoformat()}.pdf"
+    )
+
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response

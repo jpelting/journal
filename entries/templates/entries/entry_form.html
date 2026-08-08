@@ -6,7 +6,7 @@
             <a href="#" data-tab="stoic" class="active">Stoic Journal</a>
             <a href="#" data-tab="devotional">Devotional</a>
             <a href="#" data-tab="freeform">Freeform</a>
-            <a href="#" data-tab="exercise">Exercise</a>
+            <a href="#" data-tab="introspection">Introspection</a>
         </nav>
     {% endif %}
 
@@ -60,17 +60,13 @@
             {{ form.freeform_entry }}
         </section>
 
-        <section class="part tab-section{% if active_section == "exercise" %} active{% endif %}" id="tab-exercise">
-            <h2>Exercise</h2>
-            <label for="{{ form.exercise_completed.id_for_label }}">
-                {{ form.exercise_completed }} Completed today
-            </label>
-            <label for="{{ form.exercise_type.id_for_label }}">Type</label>
-            {{ form.exercise_type }}
-            <label for="{{ form.exercise_duration_minutes.id_for_label }}">Duration (minutes)</label>
-            {{ form.exercise_duration_minutes }}
-            <label for="{{ form.exercise_notes.id_for_label }}">Notes</label>
-            {{ form.exercise_notes }}
+        <section class="part tab-section{% if active_section == "introspection" %} active{% endif %}" id="tab-introspection">
+            <h2>Introspection</h2>
+            {% if introspection_prompt_obj %}
+                <p class="prompt">{{ introspection_prompt_obj.question }}</p>
+            {% endif %}
+            <label for="{{ form.introspection_response.id_for_label }}">Your reflection</label>
+            {{ form.introspection_response }}
         </section>
 
         <button class="btn" type="submit">Save entry</button>

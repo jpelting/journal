@@ -2,7 +2,10 @@
 {% block title %}{{ entry.date }} - Journal{% endblock %}
 {% block content %}
     <h1>{{ entry.date }}</h1>
-    <p><a href="{% url 'entries:edit' entry.pk %}">Edit this entry</a></p>
+    <p>
+        <a href="{% url 'entries:edit' entry.pk %}">Edit this entry</a> &middot;
+        <a href="{% url 'entries:export-pdf' %}?ids={{ entry.pk }}">Download PDF</a>
+    </p>
 
     <section class="part">
         <h2>1. Check-in</h2>
@@ -61,12 +64,8 @@
     </section>
 
     <section class="part">
-        <h2>5. Exercise</h2>
-        <p class="scores">
-            {% if entry.exercise_completed %}Done{% else %}Not logged{% endif %}
-            {% if entry.exercise_type %} &middot; {{ entry.exercise_type }}{% endif %}
-            {% if entry.exercise_duration_minutes %} &middot; {{ entry.exercise_duration_minutes }} min{% endif %}
-        </p>
-        {% if entry.exercise_notes %}<p>{{ entry.exercise_notes|linebreaksbr }}</p>{% endif %}
+        <h2>5. Introspection</h2>
+        {% if entry.introspection_prompt %}<p class="prompt">{{ entry.introspection_prompt.question }}</p>{% endif %}
+        <p>{{ entry.introspection_response|default:"—"|linebreaksbr }}</p>
     </section>
 {% endblock %}

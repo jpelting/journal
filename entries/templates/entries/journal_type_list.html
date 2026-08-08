@@ -18,8 +18,8 @@
                             {{ entry.devotional_response|truncatewords:30 }}
                         {% elif journal_type == "freeform" %}
                             {{ entry.freeform_entry|truncatewords:30 }}
-                        {% elif journal_type == "exercise" %}
-                            {{ entry.exercise_type|default:"Exercise" }}{% if entry.exercise_duration_minutes %} &middot; {{ entry.exercise_duration_minutes }} min{% endif %}
+                        {% elif journal_type == "introspection" %}
+                            {{ entry.introspection_response|truncatewords:30 }}
                         {% endif %}
                     </div>
                 </li>

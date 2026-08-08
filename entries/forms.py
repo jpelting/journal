@@ -25,10 +25,7 @@ class EntryForm(forms.ModelForm):
             "devotional_prompt",
             "devotional_response",
             "freeform_entry",
-            "exercise_completed",
-            "exercise_type",
-            "exercise_duration_minutes",
-            "exercise_notes",
+            "introspection_response",
         ]
         widgets = {
             "date": forms.DateInput(attrs={"type": "date"}),
@@ -37,7 +34,7 @@ class EntryForm(forms.ModelForm):
             "devotional_prompt": forms.HiddenInput(),
             "devotional_response": forms.Textarea(attrs={"rows": 5}),
             "freeform_entry": forms.Textarea(attrs={"rows": 8}),
-            "exercise_notes": forms.Textarea(attrs={"rows": 3}),
+            "introspection_response": forms.Textarea(attrs={"rows": 5}),
         }
 
 

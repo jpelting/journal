@@ -1,0 +1,65 @@
+{% extends "entries/base.html" %}
+{% block title %}Export - Journal{% endblock %}
+{% block content %}
+    <h1>Export</h1>
+    <p class="helptext">Choose a journal type, then select entries to download as a single PDF, in chronological order.</p>
+
+    <form method="get" id="type-form">
+        <label for="type-select">Journal type</label>
+        <select name="type" id="type-select" onchange="this.form.submit()">
+            <option value="" {% if not selected_type %}selected{% endif %}>Full entry (all sections)</option>
+            {% for type_key, type_info in journal_types.items %}
+                <option value="{{ type_key }}" {% if selected_type == type_key %}selected{% endif %}>{{ type_info.label }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <form method="post" action="{% url 'entries:export-pdf' %}">
+        {% csrf_token %}
+        <input type="hidden" name="type" value="{{ selected_type }}">
+        <div class="export-actions">
+            <label class="goal-check"><input type="checkbox" id="select-all"> Select all</label>
+            <button class="btn" type="submit">Download PDF</button>
+        </div>
+
+        {% if entries %}
+            <ul class="entry-list">
+                {% for entry in entries %}
+                    <li class="export-row">
+                        <input type="checkbox" name="ids" value="{{ entry.pk }}" class="export-checkbox">
+                        <div>
+                            <strong>{{ entry.date }}</strong>
+                            <div class="scores">
+                                {% if selected_type == "stoic" %}
+                                    {{ entry.stoic_response|truncatewords:20 }}
+                                {% elif selected_type == "devotional" %}
+                                    {{ entry.devotional_response|truncatewords:20 }}
+                                {% elif selected_type == "freeform" %}
+                                    {{ entry.freeform_entry|truncatewords:20 }}
+                                {% elif selected_type == "introspection" %}
+                                    {{ entry.introspection_response|truncatewords:20 }}
+                                {% else %}
+                                    {{ entry.freeform_entry|truncatewords:20 }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No entries for this journal type yet.</p>
+        {% endif %}
+
+        <div class="export-actions">
+            <button class="btn" type="submit">Download PDF</button>
+        </div>
+    </form>
+
+    <script>
+        document.getElementById('select-all').addEventListener('change', function (e) {
+            document.querySelectorAll('.export-checkbox').forEach(function (cb) {
+                cb.checked = e.target.checked;
+            });
+        });
+    </script>
+{% endblock %}

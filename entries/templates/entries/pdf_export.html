@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 11pt; color: #2b2b28; }
+    h1 { font-size: 18pt; color: #5b4636; margin-bottom: 0.2em; }
+    h2 { font-size: 13pt; color: #5b4636; margin-top: 1em; margin-bottom: 0.2em; }
+    p { margin: 0.3em 0; line-height: 1.4; }
+    .prompt { font-style: italic; color: #5b4636; }
+    .helptext { font-size: 9pt; color: #888; }
+    .scores { color: #7a6a55; font-size: 10pt; }
+    ul { margin: 0.3em 0; padding-left: 1.2em; }
+</style>
+</head>
+<body>
+    {% for entry in entries %}
+    <div class="entry"{% if not forloop.last %} style="page-break-after: always;"{% endif %}>
+        <h1>{{ entry.date }}</h1>
+
+        {% if not journal_type %}
+        <h2>1. Check-in</h2>
+        {% if entry.weather_summary %}<p class="helptext">Weather: {{ entry.weather_summary }}</p>{% endif %}
+        <p class="scores">
+            Morning &mdash; Mental: {{ entry.morning_mental_score|default:"-" }}/10 &middot;
+            Physical: {{ entry.morning_physical_score|default:"-" }}/10 &middot;
+            Emotional: {{ entry.morning_emotional_score|default:"-" }}/10 &middot;
+            Spiritual: {{ entry.morning_spiritual_score|default:"-" }}/10
+        </p>
+        <p class="scores">
+            Evening &mdash; Mental: {{ entry.evening_mental_score|default:"-" }}/10 &middot;
+            Physical: {{ entry.evening_physical_score|default:"-" }}/10 &middot;
+            Emotional: {{ entry.evening_emotional_score|default:"-" }}/10 &middot;
+            Spiritual: {{ entry.evening_spiritual_score|default:"-" }}/10
+        </p>
+        {% if entry.goals.exists %}
+            <ul>
+                {% for goal in entry.goals.all %}
+                    <li>{% if goal.completed %}[x]{% else %}[ ]{% endif %} {{ goal.text }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% if entry.one_percent_goal %}
+            <p class="prompt">
+                1% goal: {{ entry.one_percent_goal }} &mdash;
+                {% if entry.one_percent_goal_achieved %}achieved{% else %}not yet{% endif %}
+            </p>
+        {% endif %}
+        {% endif %}
+
+        {% if not journal_type or journal_type == "stoic" %}
+        <h2>2. Stoic guided journal</h2>
+        {% if entry.stoic_prompt %}
+            <p class="prompt">{{ entry.stoic_prompt.text }}{% if entry.stoic_prompt.source %} &mdash; {{ entry.stoic_prompt.source }}{% endif %}</p>
+            {% if entry.stoic_prompt.context_summary %}<p>{{ entry.stoic_prompt.context_summary }}</p>{% endif %}
+            {% if entry.stoic_prompt.reflection_prompt %}<p class="prompt">{{ entry.stoic_prompt.reflection_prompt }}</p>{% endif %}
+        {% endif %}
+        <p>{{ entry.stoic_response|default:"&mdash;"|linebreaksbr }}</p>
+        {% endif %}
+
+        {% if not journal_type or journal_type == "devotional" %}
+        <h2>3. Biblical devotional</h2>
+        {% if entry.devotional_prompt %}
+            <p class="prompt">{{ entry.devotional_prompt.reference }}{% if entry.devotional_prompt.verse_text %} &mdash; {{ entry.devotional_prompt.verse_text }}{% endif %}</p>
+            {% if entry.devotional_prompt.verse_text %}<p class="helptext">{{ bible_attribution }}</p>{% endif %}
+            {% if entry.devotional_prompt.context_summary %}<p>{{ entry.devotional_prompt.context_summary }}</p>{% endif %}
+            <p class="prompt">{{ entry.devotional_prompt.reflection_prompt }}</p>
+        {% endif %}
+        <p>{{ entry.devotional_response|default:"&mdash;"|linebreaksbr }}</p>
+        {% endif %}
+
+        {% if not journal_type or journal_type == "freeform" %}
+        <h2>4. Freeform journal</h2>
+        <p>{{ entry.freeform_entry|default:"&mdash;"|linebreaksbr }}</p>
+        {% endif %}
+
+        {% if not journal_type or journal_type == "introspection" %}
+        <h2>5. Introspection</h2>
+        {% if entry.introspection_prompt %}<p class="prompt">{{ entry.introspection_prompt.question }}</p>{% endif %}
+        <p>{{ entry.introspection_response|default:"&mdash;"|linebreaksbr }}</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</body>
+</html>

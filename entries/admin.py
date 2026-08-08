@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .bible import get_passage_text
-from .models import DevotionalPrompt, Entry, Goal, MomentCheckIn, StoicPrompt
+from .models import DevotionalPrompt, Entry, Goal, IntrospectionPrompt, MomentCheckIn, StoicPrompt
 
 
 class GoalInline(admin.TabularInline):
@@ -17,12 +17,17 @@ class EntryAdmin(admin.ModelAdmin):
         "physical_score",
         "emotional_score",
         "spiritual_score",
-        "exercise_completed",
     ]
-    list_filter = ["exercise_completed"]
     date_hierarchy = "date"
     ordering = ["-date"]
     inlines = [GoalInline]
+    readonly_fields = ["introspection_question"]
+
+    def introspection_question(self, obj):
+        prompt = obj.introspection_prompt if obj.pk else None
+        return prompt.question if prompt else "—"
+
+    introspection_question.short_description = "Question for this day"
 
     fieldsets = [
         ("Entry", {"fields": ["date"]}),
@@ -57,15 +62,8 @@ class EntryAdmin(admin.ModelAdmin):
             {"fields": ["freeform_entry"]},
         ),
         (
-            "5. Exercise",
-            {
-                "fields": [
-                    "exercise_completed",
-                    "exercise_type",
-                    "exercise_duration_minutes",
-                    "exercise_notes",
-                ]
-            },
+            "5. Introspection",
+            {"fields": ["introspection_question", "introspection_response"]},
         ),
     ]
 
@@ -87,6 +85,12 @@ class DevotionalPromptAdmin(admin.ModelAdmin):
             if fetched:
                 obj.verse_text = fetched
         super().save_model(request, obj, form, change)
+
+
+@admin.register(IntrospectionPrompt)
+class IntrospectionPromptAdmin(admin.ModelAdmin):
+    list_display = ["day_of_year", "__str__"]
+    ordering = ["day_of_year"]
 
 
 @admin.register(MomentCheckIn)

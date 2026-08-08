@@ -187,6 +187,12 @@
             cursor: pointer;
         }
         .emotion-chip input { width: auto; margin: 0; }
+
+        .export-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid #eee2cf; }
+        .export-row input[type=checkbox] { width: auto; margin: 0; }
+        .export-actions { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .messages { list-style: none; padding: 0; margin-bottom: 1.5rem; }
+        .messages li { padding: 0.6rem 1rem; border-radius: 6px; background: #f8d7da; color: #7a2e2e; border: 1px solid #f1b0b7; }
     </style>
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
@@ -194,12 +200,18 @@
         <a href="{% url 'entries:checkin' %}">Check-in</a>
         <a href="{% url 'entries:list' %}">Journals</a>
         <a href="{% url 'entries:calendar' %}">Calendar</a>
+        <a href="{% url 'entries:export' %}">Export</a>
         <a href="/admin/">Admin</a>
         <form action="{% url 'logout' %}" method="post" class="logout-form">
             {% csrf_token %}
             <button type="submit">Log out</button>
         </form>
     </nav>
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+        </ul>
+    {% endif %}
     {% block content %}{% endblock %}
 </body>
 </html>

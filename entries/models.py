@@ -34,6 +34,24 @@ class DevotionalPrompt(models.Model):
         return self.reference
 
 
+class IntrospectionPrompt(models.Model):
+    day_of_year = models.PositiveSmallIntegerField(
+        unique=True, validators=[MinValueValidator(1), MaxValueValidator(365)]
+    )
+    question = models.TextField()
+
+    class Meta:
+        ordering = ["day_of_year"]
+
+    def __str__(self):
+        return f"Day {self.day_of_year}: {self.question[:60]}"
+
+    @classmethod
+    def for_date(cls, d):
+        day = min(d.timetuple().tm_yday, 365)  # leap-day 366 reuses day 365's question
+        return cls.objects.filter(day_of_year=day).first()
+
+
 class Entry(models.Model):
     date = models.DateField(default=timezone.localdate, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -65,11 +83,8 @@ class Entry(models.Model):
     # Part 4: freeform journal
     freeform_entry = models.TextField(blank=True)
 
-    # Part 5: exercise
-    exercise_completed = models.BooleanField(default=False)
-    exercise_type = models.CharField(max_length=100, blank=True)
-    exercise_duration_minutes = models.PositiveIntegerField(null=True, blank=True)
-    exercise_notes = models.TextField(blank=True)
+    # Part 5: introspection
+    introspection_response = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-date"]
@@ -100,6 +115,10 @@ class Entry(models.Model):
     @property
     def spiritual_score(self):
         return self._blended_score(self.morning_spiritual_score, self.evening_spiritual_score)
+
+    @property
+    def introspection_prompt(self):
+        return IntrospectionPrompt.for_date(self.date)
 
 
 class Goal(models.Model):

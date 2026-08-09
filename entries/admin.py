@@ -1,7 +1,16 @@
 from django.contrib import admin
 
 from .bible import get_passage_text
-from .models import DevotionalPrompt, Entry, Goal, IntrospectionPrompt, MomentCheckIn, StoicPrompt
+from .models import (
+    DevotionalPrompt,
+    Entry,
+    Goal,
+    IntrospectionPrompt,
+    MomentCheckIn,
+    Prayer,
+    StoicPractice,
+    StoicPrompt,
+)
 
 
 class GoalInline(admin.TabularInline):
@@ -21,13 +30,19 @@ class EntryAdmin(admin.ModelAdmin):
     date_hierarchy = "date"
     ordering = ["-date"]
     inlines = [GoalInline]
-    readonly_fields = ["introspection_question"]
+    readonly_fields = ["introspection_question", "stoic_practice_display"]
 
     def introspection_question(self, obj):
         prompt = obj.introspection_prompt if obj.pk else None
         return prompt.question if prompt else "—"
 
     introspection_question.short_description = "Question for this day"
+
+    def stoic_practice_display(self, obj):
+        practice = obj.stoic_practice if obj.pk else None
+        return f"Week {practice.week_number}: {practice.title}" if practice else "—"
+
+    stoic_practice_display.short_description = "This week's Stoic practice"
 
     fieldsets = [
         ("Entry", {"fields": ["date"]}),
@@ -46,6 +61,21 @@ class EntryAdmin(admin.ModelAdmin):
                     "evening_emotional_score",
                     "evening_spiritual_score",
                     "one_percent_goal_achieved",
+                ]
+            },
+        ),
+        (
+            "1b. Stoic daily reflection",
+            {
+                "fields": [
+                    "stoic_practice_display",
+                    "morning_anxious_about",
+                    "morning_within_control",
+                    "morning_reserve_clause",
+                    "evening_did_well",
+                    "evening_where_falter",
+                    "evening_could_improve",
+                    "evening_gratitude_audit",
                 ]
             },
         ),
@@ -91,6 +121,18 @@ class DevotionalPromptAdmin(admin.ModelAdmin):
 class IntrospectionPromptAdmin(admin.ModelAdmin):
     list_display = ["day_of_year", "__str__"]
     ordering = ["day_of_year"]
+
+
+@admin.register(Prayer)
+class PrayerAdmin(admin.ModelAdmin):
+    list_display = ["month", "day", "reference", "occasion"]
+    ordering = ["month", "day"]
+
+
+@admin.register(StoicPractice)
+class StoicPracticeAdmin(admin.ModelAdmin):
+    list_display = ["week_number", "part", "title"]
+    ordering = ["week_number"]
 
 
 @admin.register(MomentCheckIn)

@@ -2,4 +2,40 @@
     <a href="{% url 'entries:checkin-morning' %}" class="{% if active_tab == 'morning' %}active{% endif %}">Morning Check-in</a>
     <a href="{% url 'entries:checkin-evening' %}" class="{% if active_tab == 'evening' %}active{% endif %}">Evening Follow-up</a>
     <a href="{% url 'entries:checkin-moment' %}" class="{% if active_tab == 'moment' %}active{% endif %}">In the Moment</a>
+    {% if today_prayer %}
+        <button type="button" class="btn-prayer" id="prayer-button">Daily Prayer</button>
+    {% endif %}
 </div>
+
+{% if today_prayer %}
+    <div class="modal-backdrop" id="prayer-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="prayer-modal-close" aria-label="Close">&times;</button>
+            <h2>Today's Prayer{% if today_prayer.occasion %} &mdash; {{ today_prayer.occasion }}{% endif %}</h2>
+            {% if today_prayer.quote %}
+                <p class="prompt">
+                    &ldquo;{{ today_prayer.quote }}&rdquo;{% if today_prayer.reference %} &mdash; {{ today_prayer.reference }}{% endif %}
+                </p>
+            {% endif %}
+            <p>{{ today_prayer.body|linebreaksbr }}</p>
+            {% if today_prayer.attribution %}<p class="helptext">&mdash; {{ today_prayer.attribution }}</p>{% endif %}
+        </div>
+    </div>
+    <script>
+        (function () {
+            var backdrop = document.getElementById("prayer-modal-backdrop");
+
+            function openModal() { backdrop.hidden = false; }
+            function closeModal() { backdrop.hidden = true; }
+
+            document.getElementById("prayer-button").addEventListener("click", openModal);
+            document.getElementById("prayer-modal-close").addEventListener("click", closeModal);
+            backdrop.addEventListener("click", function (event) {
+                if (event.target === backdrop) closeModal();
+            });
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape" && !backdrop.hidden) closeModal();
+            });
+        })();
+    </script>
+{% endif %}

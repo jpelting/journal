@@ -51,6 +51,36 @@
             {{ form.one_percent_goal.errors }}
         </section>
 
+        <section class="part">
+            <h2>Stoic Daily Reflection &mdash; Morning Prep</h2>
+
+            <label>Current Week's Practice</label>
+            {% if entry.stoic_practice %}
+                <p class="prompt">Week {{ entry.stoic_practice.week_number }}: {{ entry.stoic_practice.title }}</p>
+                {% if entry.stoic_practice.part %}<p class="helptext">{{ entry.stoic_practice.part }}</p>{% endif %}
+                <p>{{ entry.stoic_practice.description }}</p>
+            {% else %}
+                <p class="helptext">No practice found for this week.</p>
+            {% endif %}
+
+            <h3>The Dichotomy of Control</h3>
+            <label for="{{ form.morning_anxious_about.id_for_label }}">What am I anxious about today?</label>
+            {{ form.morning_anxious_about }}
+            {{ form.morning_anxious_about.errors }}
+
+            <label for="{{ form.morning_within_control.id_for_label }}">What part of this is 100% in my control?</label>
+            {{ form.morning_within_control }}
+            {{ form.morning_within_control.errors }}
+
+            <h3>The Reserve Clause</h3>
+            <p class="helptext">
+                List your biggest event today. Append &ldquo;Fate permitting&rdquo; to it, and mentally accept that plans may change.
+                E.g. &ldquo;I will deliver the project presentation today&mdash;if nothing happens to prevent me.&rdquo;
+            </p>
+            {{ form.morning_reserve_clause }}
+            {{ form.morning_reserve_clause.errors }}
+        </section>
+
         <button class="btn" type="submit">Save morning check-in</button>
     </form>
 

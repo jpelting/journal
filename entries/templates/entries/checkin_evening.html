@@ -50,6 +50,31 @@
             {% endif %}
         </section>
 
+        <section class="part">
+            <h2>Stoic Daily Reflection &mdash; Evening Review</h2>
+            <p class="helptext">Answer with radical honesty and zero self-judgment.</p>
+
+            <label for="{{ form.evening_did_well.id_for_label }}">What did I do well today?</label>
+            <p class="helptext">Where did you show patience, discipline, or focus?</p>
+            {{ form.evening_did_well }}
+            {{ form.evening_did_well.errors }}
+
+            <label for="{{ form.evening_where_falter.id_for_label }}">Where did I falter?</label>
+            <p class="helptext">Did you lose your temper, complain, procrastinate, or let your ego take over?</p>
+            {{ form.evening_where_falter }}
+            {{ form.evening_where_falter.errors }}
+
+            <label for="{{ form.evening_could_improve.id_for_label }}">What could I have done better?</label>
+            <p class="helptext">If you could rewrite today, how would your ideal self respond to those exact situations?</p>
+            {{ form.evening_could_improve }}
+            {{ form.evening_could_improve.errors }}
+
+            <label for="{{ form.evening_gratitude_audit.id_for_label }}">The Gratitude Audit</label>
+            <p class="helptext">List one thing you would deeply miss if it were permanently taken away from you tomorrow.</p>
+            {{ form.evening_gratitude_audit }}
+            {{ form.evening_gratitude_audit.errors }}
+        </section>
+
         <button class="btn" type="submit">Save evening follow-up</button>
     </form>
 

@@ -22,7 +22,7 @@
                         {% if day %}
                             <td class="cal-day{% if day.is_today %} today{% endif %}"{% if day.bg_color %} style="background:{{ day.bg_color }};"{% endif %}>
                                 {% if day.entry %}
-                                    <a href="{{ day.entry.get_absolute_url }}">{{ day.day }}</a>
+                                    <a href="{{ day.entry.get_absolute_url }}" class="cal-day-link" data-entry-id="{{ day.entry.pk }}">{{ day.day }}</a>
                                     <div class="cal-scores">
                                         {% if day.entry.mental_score %}M{{ day.entry.mental_score }} {% endif %}
                                         {% if day.entry.physical_score %}P{{ day.entry.physical_score }} {% endif %}
@@ -47,5 +47,58 @@
         <span class="legend-item"><span class="legend-swatch" style="background: hsl(30, 45%, 85%);"></span>3&ndash;5</span>
         <span class="legend-item"><span class="legend-swatch" style="background: hsl(50, 45%, 85%);"></span>6&ndash;7</span>
         <span class="legend-item"><span class="legend-swatch" style="background: hsl(110, 45%, 85%);"></span>8&ndash;10</span>
+        <span class="legend-item legend-note">Paler = fewer dimensions logged that day</span>
     </div>
+
+    {% for week in weeks %}
+        {% for day in week %}
+            {% if day.entry %}
+                <template class="day-modal-template" data-entry-id="{{ day.entry.pk }}">
+                    {% include "entries/_entry_summary.html" with entry=day.entry %}
+                </template>
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+
+    <div class="modal-backdrop" id="day-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="day-modal-close" aria-label="Close">&times;</button>
+            <div id="day-modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var backdrop = document.getElementById("day-modal-backdrop");
+            var body = document.getElementById("day-modal-body");
+
+            function openModal(entryId) {
+                var tpl = document.querySelector('template.day-modal-template[data-entry-id="' + entryId + '"]');
+                if (!tpl) return;
+                body.innerHTML = "";
+                body.appendChild(tpl.content.cloneNode(true));
+                backdrop.hidden = false;
+            }
+
+            function closeModal() {
+                backdrop.hidden = true;
+                body.innerHTML = "";
+            }
+
+            document.querySelectorAll(".cal-day-link").forEach(function (link) {
+                link.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    openModal(link.dataset.entryId);
+                });
+            });
+
+            document.getElementById("day-modal-close").addEventListener("click", closeModal);
+            backdrop.addEventListener("click", function (event) {
+                if (event.target === backdrop) closeModal();
+            });
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape" && !backdrop.hidden) closeModal();
+            });
+        })();
+    </script>
 {% endblock %}

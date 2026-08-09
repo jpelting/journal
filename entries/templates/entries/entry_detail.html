@@ -35,6 +35,18 @@
                 {% if entry.one_percent_goal_achieved %}achieved{% else %}not yet{% endif %}
             </p>
         {% endif %}
+
+        {% if entry.stoic_practice or entry.morning_anxious_about or entry.morning_within_control or entry.morning_reserve_clause or entry.evening_did_well or entry.evening_where_falter or entry.evening_could_improve or entry.evening_gratitude_audit %}
+            <h3>Stoic Daily Reflection</h3>
+            {% if entry.stoic_practice %}<p><strong>This week's practice:</strong> Week {{ entry.stoic_practice.week_number }}: {{ entry.stoic_practice.title }}</p>{% endif %}
+            {% if entry.morning_anxious_about %}<p class="prompt">What am I anxious about today?</p><p>{{ entry.morning_anxious_about|linebreaksbr }}</p>{% endif %}
+            {% if entry.morning_within_control %}<p class="prompt">What part of this is 100% in my control?</p><p>{{ entry.morning_within_control|linebreaksbr }}</p>{% endif %}
+            {% if entry.morning_reserve_clause %}<p class="prompt">Reserve Clause</p><p>{{ entry.morning_reserve_clause|linebreaksbr }}</p>{% endif %}
+            {% if entry.evening_did_well %}<p class="prompt">What did I do well today?</p><p>{{ entry.evening_did_well|linebreaksbr }}</p>{% endif %}
+            {% if entry.evening_where_falter %}<p class="prompt">Where did I falter?</p><p>{{ entry.evening_where_falter|linebreaksbr }}</p>{% endif %}
+            {% if entry.evening_could_improve %}<p class="prompt">What could I have done better?</p><p>{{ entry.evening_could_improve|linebreaksbr }}</p>{% endif %}
+            {% if entry.evening_gratitude_audit %}<p class="prompt">Gratitude Audit</p><p>{{ entry.evening_gratitude_audit|linebreaksbr }}</p>{% endif %}
+        {% endif %}
     </section>
 
     <section class="part">

@@ -47,11 +47,19 @@ class MorningCheckInForm(forms.ModelForm):
             "morning_emotional_score",
             "morning_spiritual_score",
             "one_percent_goal",
+            "morning_anxious_about",
+            "morning_within_control",
+            "morning_reserve_clause",
         ]
         widgets = {
             **SCORE_WIDGETS,
             "one_percent_goal": forms.Textarea(
                 attrs={"rows": 2, "placeholder": "What's one small thing that would make today 1% better?"}
+            ),
+            "morning_anxious_about": forms.Textarea(attrs={"rows": 2}),
+            "morning_within_control": forms.Textarea(attrs={"rows": 2}),
+            "morning_reserve_clause": forms.Textarea(
+                attrs={"rows": 2, "placeholder": "e.g. I will deliver the project presentation today—if nothing happens to prevent me."}
             ),
         }
 
@@ -65,8 +73,18 @@ class EveningCheckInForm(forms.ModelForm):
             "evening_emotional_score",
             "evening_spiritual_score",
             "one_percent_goal_achieved",
+            "evening_did_well",
+            "evening_where_falter",
+            "evening_could_improve",
+            "evening_gratitude_audit",
         ]
-        widgets = SCORE_WIDGETS
+        widgets = {
+            **SCORE_WIDGETS,
+            "evening_did_well": forms.Textarea(attrs={"rows": 2}),
+            "evening_where_falter": forms.Textarea(attrs={"rows": 2}),
+            "evening_could_improve": forms.Textarea(attrs={"rows": 2}),
+            "evening_gratitude_audit": forms.Textarea(attrs={"rows": 2}),
+        }
 
 
 GoalFormSet = forms.inlineformset_factory(

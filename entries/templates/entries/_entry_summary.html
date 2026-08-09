@@ -1,0 +1,65 @@
+<h2>{{ entry.date|date:"l, F j, Y" }}</h2>
+{% if entry.weather_summary %}<p class="helptext">Weather: {{ entry.weather_summary }}</p>{% endif %}
+
+<h3>Morning check-in</h3>
+<p class="scores">
+    Mental: {{ entry.morning_mental_score|default:"-" }}/10 &middot;
+    Physical: {{ entry.morning_physical_score|default:"-" }}/10 &middot;
+    Emotional: {{ entry.morning_emotional_score|default:"-" }}/10 &middot;
+    Spiritual: {{ entry.morning_spiritual_score|default:"-" }}/10
+</p>
+{% if entry.one_percent_goal %}<p class="prompt">1% goal: {{ entry.one_percent_goal }}</p>{% endif %}
+{% if entry.goals.exists %}
+    <ul>
+        {% for goal in entry.goals.all %}
+            <li>{% if goal.completed %}&#9745;{% else %}&#9744;{% endif %} {{ goal.text }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+{% if entry.stoic_practice %}<p class="helptext">This week's practice: Week {{ entry.stoic_practice.week_number }}: {{ entry.stoic_practice.title }}</p>{% endif %}
+{% if entry.morning_anxious_about %}<p class="prompt">Anxious about:</p><p>{{ entry.morning_anxious_about|linebreaksbr }}</p>{% endif %}
+{% if entry.morning_within_control %}<p class="prompt">In my control:</p><p>{{ entry.morning_within_control|linebreaksbr }}</p>{% endif %}
+{% if entry.morning_reserve_clause %}<p class="prompt">Reserve clause:</p><p>{{ entry.morning_reserve_clause|linebreaksbr }}</p>{% endif %}
+
+<h3>Evening check-in</h3>
+<p class="scores">
+    Mental: {{ entry.evening_mental_score|default:"-" }}/10 &middot;
+    Physical: {{ entry.evening_physical_score|default:"-" }}/10 &middot;
+    Emotional: {{ entry.evening_emotional_score|default:"-" }}/10 &middot;
+    Spiritual: {{ entry.evening_spiritual_score|default:"-" }}/10
+</p>
+{% if entry.one_percent_goal %}
+    <p class="helptext">1% goal {% if entry.one_percent_goal_achieved %}achieved{% else %}not yet achieved{% endif %}</p>
+{% endif %}
+{% if entry.evening_did_well %}<p class="prompt">Did well:</p><p>{{ entry.evening_did_well|linebreaksbr }}</p>{% endif %}
+{% if entry.evening_where_falter %}<p class="prompt">Where I faltered:</p><p>{{ entry.evening_where_falter|linebreaksbr }}</p>{% endif %}
+{% if entry.evening_could_improve %}<p class="prompt">Could improve:</p><p>{{ entry.evening_could_improve|linebreaksbr }}</p>{% endif %}
+{% if entry.evening_gratitude_audit %}<p class="prompt">Gratitude audit:</p><p>{{ entry.evening_gratitude_audit|linebreaksbr }}</p>{% endif %}
+
+{% if entry.stoic_response %}
+    <h3>Stoic reflection</h3>
+    {% if entry.stoic_prompt %}<p class="prompt">{{ entry.stoic_prompt.text }}</p>{% endif %}
+    <p>{{ entry.stoic_response|linebreaksbr }}</p>
+{% endif %}
+
+{% if entry.devotional_response %}
+    <h3>Devotional</h3>
+    {% if entry.devotional_prompt %}<p class="prompt">{{ entry.devotional_prompt.reference }}</p>{% endif %}
+    <p>{{ entry.devotional_response|linebreaksbr }}</p>
+{% endif %}
+
+{% if entry.freeform_entry %}
+    <h3>Freeform journal</h3>
+    <p>{{ entry.freeform_entry|linebreaksbr }}</p>
+{% endif %}
+
+{% if entry.introspection_response %}
+    <h3>Introspection</h3>
+    {% if entry.introspection_prompt %}<p class="prompt">{{ entry.introspection_prompt.question }}</p>{% endif %}
+    <p>{{ entry.introspection_response|linebreaksbr }}</p>
+{% endif %}
+
+<p>
+    <a href="{{ entry.get_absolute_url }}">Open full page</a> &middot;
+    <a href="{% url 'entries:edit' entry.pk %}">Edit</a>
+</p>

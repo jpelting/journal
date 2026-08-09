@@ -20,7 +20,7 @@ from .forms import (
     MomentCheckInForm,
     MorningCheckInForm,
 )
-from .models import DevotionalPrompt, Entry, IntrospectionPrompt, MomentCheckIn, StoicPrompt
+from .models import DevotionalPrompt, Entry, IntrospectionPrompt, MomentCheckIn, Prayer, StoicPrompt
 from .weather import get_current_weather, weather_animation_for_summary
 
 JOURNAL_TYPES = {
@@ -165,32 +165,34 @@ WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 
 MOOD_BANDS = [
-    (2, "hsl(10, 45%, 85%)"),   # red: 1-2
-    (5, "hsl(30, 45%, 85%)"),   # orange: 3-5
-    (7, "hsl(50, 45%, 85%)"),   # yellow: 6-7
-    (10, "hsl(110, 45%, 85%)"),  # green: 8-10
+    (2, 10),   # red: 1-2
+    (5, 30),   # orange: 3-5
+    (7, 50),   # yellow: 6-7
+    (10, 110),  # green: 8-10
 ]
+
+# Saturation scales with how many of the 4 dimensions have data, so a day
+# with one lonely score reads as a faint hint rather than a fully-confident color.
+MOOD_MIN_SATURATION = 15
+MOOD_MAX_SATURATION = 45
 
 
 def _mood_color(entry):
-    scores = [
-        entry.morning_mental_score,
-        entry.evening_mental_score,
-        entry.morning_physical_score,
-        entry.evening_physical_score,
-        entry.morning_emotional_score,
-        entry.evening_emotional_score,
-        entry.morning_spiritual_score,
-        entry.evening_spiritual_score,
+    dimension_scores = [
+        entry.mental_score,
+        entry.physical_score,
+        entry.emotional_score,
+        entry.spiritual_score,
     ]
-    present = [s for s in scores if s is not None]
+    present = [s for s in dimension_scores if s is not None]
     if not present:
         return None
     avg = sum(present) / len(present)
-    for ceiling, color in MOOD_BANDS:
-        if avg <= ceiling:
-            return color
-    return MOOD_BANDS[-1][1]
+    hue = next(hue for ceiling, hue in MOOD_BANDS if avg <= ceiling)
+    saturation = MOOD_MIN_SATURATION + (MOOD_MAX_SATURATION - MOOD_MIN_SATURATION) * (
+        len(present) - 1
+    ) / (len(dimension_scores) - 1)
+    return f"hsl({hue}, {saturation:.0f}%, 85%)"
 
 
 def calendar_view(request, year=None, month=None):
@@ -204,6 +206,8 @@ def calendar_view(request, year=None, month=None):
     entries_by_day = {
         entry.date.day: entry
         for entry in Entry.objects.filter(date__year=year, date__month=month)
+        .select_related("stoic_prompt", "devotional_prompt")
+        .prefetch_related("goals")
     }
 
     weeks = []
@@ -277,6 +281,7 @@ def checkin_morning_view(request):
             "now": timezone.localtime(),
             "weather_location": settings.WEATHER_LOCATION_NAME,
             "weather_animation": weather_animation_for_summary(entry.weather_summary),
+            "today_prayer": Prayer.for_date(timezone.localdate()),
         },
     )
 
@@ -308,6 +313,7 @@ def checkin_evening_view(request):
             "goal_formset": goal_formset,
             "percent_complete": percent_complete,
             "now": timezone.localtime(),
+            "today_prayer": Prayer.for_date(timezone.localdate()),
         },
     )
 
@@ -332,6 +338,7 @@ def checkin_moment_view(request):
             "form": form,
             "recent_moments": MomentCheckIn.objects.all()[:10],
             "now": timezone.localtime(),
+            "today_prayer": Prayer.for_date(timezone.localdate()),
         },
     )
 

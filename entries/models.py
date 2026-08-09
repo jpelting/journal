@@ -52,6 +52,47 @@ class IntrospectionPrompt(models.Model):
         return cls.objects.filter(day_of_year=day).first()
 
 
+class Prayer(models.Model):
+    month = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
+    day = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(31)])
+    reference = models.CharField(max_length=100, blank=True, help_text="Scripture reference for the opening quote.")
+    occasion = models.CharField(max_length=100, blank=True, help_text="e.g. 'Christmas Day', 'For Sunday Morning'.")
+    quote = models.TextField(blank=True, help_text="The opening scripture quote.")
+    body = models.TextField(help_text="The prayer text.")
+    attribution = models.CharField(max_length=200, blank=True, help_text="Original contributor, if known.")
+
+    class Meta:
+        ordering = ["month", "day"]
+        constraints = [models.UniqueConstraint(fields=["month", "day"], name="unique_prayer_month_day")]
+
+    def __str__(self):
+        return f"{self.month:02d}-{self.day:02d}: {self.body[:50]}"
+
+    @classmethod
+    def for_date(cls, d):
+        return cls.objects.filter(month=d.month, day=d.day).first()
+
+
+class StoicPractice(models.Model):
+    week_number = models.PositiveSmallIntegerField(
+        unique=True, validators=[MinValueValidator(1), MaxValueValidator(52)]
+    )
+    part = models.CharField(max_length=100, blank=True, help_text="e.g. 'The Discipline of Desire'.")
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+
+    class Meta:
+        ordering = ["week_number"]
+
+    def __str__(self):
+        return f"Week {self.week_number}: {self.title}"
+
+    @classmethod
+    def for_date(cls, d):
+        week = min(d.isocalendar()[1], 52)  # ISO week 53 (rare) reuses week 52's practice
+        return cls.objects.filter(week_number=week).first()
+
+
 class Entry(models.Model):
     date = models.DateField(default=timezone.localdate, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -71,6 +112,26 @@ class Entry(models.Model):
     evening_emotional_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
     evening_spiritual_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
     one_percent_goal_achieved = models.BooleanField(default=False)
+
+    # Part 1b: Stoic daily reflection (morning prep / evening review), per the
+    # "Daily Stoic Journal" template — distinct from the Part 2 guided journal below.
+    # The week's practice itself isn't stored per-entry; see the stoic_practice property.
+    morning_anxious_about = models.TextField(blank=True, help_text="What am I anxious about today?")
+    morning_within_control = models.TextField(blank=True, help_text="What part of this is 100% in my control?")
+    morning_reserve_clause = models.TextField(
+        blank=True, help_text="Today's biggest event, held with “Fate permitting.”"
+    )
+
+    evening_did_well = models.TextField(blank=True, help_text="Where did I show patience, discipline, or focus?")
+    evening_where_falter = models.TextField(
+        blank=True, help_text="Did I lose my temper, complain, procrastinate, or let my ego take over?"
+    )
+    evening_could_improve = models.TextField(
+        blank=True, help_text="If I could rewrite today, how would my ideal self respond to those exact situations?"
+    )
+    evening_gratitude_audit = models.TextField(
+        blank=True, help_text="One thing I'd deeply miss if it were permanently taken away tomorrow."
+    )
 
     # Part 2: stoic guided journal
     stoic_prompt = models.ForeignKey(StoicPrompt, null=True, blank=True, on_delete=models.SET_NULL)
@@ -119,6 +180,10 @@ class Entry(models.Model):
     @property
     def introspection_prompt(self):
         return IntrospectionPrompt.for_date(self.date)
+
+    @property
+    def stoic_practice(self):
+        return StoicPractice.for_date(self.date)
 
 
 class Goal(models.Model):

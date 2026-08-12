@@ -37,6 +37,15 @@ class EntryForm(forms.ModelForm):
             "introspection_response": forms.Textarea(attrs={"rows": 5}),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        date = cleaned_data.get("date")
+        if date and self.instance.user_id:
+            clash = Entry.objects.filter(user=self.instance.user, date=date).exclude(pk=self.instance.pk)
+            if clash.exists():
+                self.add_error("date", "You already have an entry for this date.")
+        return cleaned_data
+
 
 class MorningCheckInForm(forms.ModelForm):
     class Meta:

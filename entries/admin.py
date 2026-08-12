@@ -22,11 +22,13 @@ class GoalInline(admin.TabularInline):
 class EntryAdmin(admin.ModelAdmin):
     list_display = [
         "date",
+        "user",
         "mental_score",
         "physical_score",
         "emotional_score",
         "spiritual_score",
     ]
+    list_filter = ["user"]
     date_hierarchy = "date"
     ordering = ["-date"]
     inlines = [GoalInline]
@@ -45,7 +47,7 @@ class EntryAdmin(admin.ModelAdmin):
     stoic_practice_display.short_description = "This week's Stoic practice"
 
     fieldsets = [
-        ("Entry", {"fields": ["date"]}),
+        ("Entry", {"fields": ["user", "date"]}),
         (
             "1. Check-in",
             {
@@ -137,6 +139,7 @@ class StoicPracticeAdmin(admin.ModelAdmin):
 
 @admin.register(MomentCheckIn)
 class MomentCheckInAdmin(admin.ModelAdmin):
-    list_display = ["created_at", "emotions", "entry"]
+    list_display = ["created_at", "user", "emotions", "entry"]
+    list_filter = ["user"]
     date_hierarchy = "created_at"
     ordering = ["-created_at"]

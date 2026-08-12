@@ -1,7 +1,10 @@
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+
+from .fields import EncryptedTextField
 
 SCORE_VALIDATORS = [MinValueValidator(1), MaxValueValidator(10)]
 
@@ -94,7 +97,8 @@ class StoicPractice(models.Model):
 
 
 class Entry(models.Model):
-    date = models.DateField(default=timezone.localdate, unique=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="entries")
+    date = models.DateField(default=timezone.localdate)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -105,7 +109,7 @@ class Entry(models.Model):
     morning_physical_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
     morning_emotional_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
     morning_spiritual_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
-    one_percent_goal = models.TextField(blank=True, help_text="One small thing that would make today 1% better.")
+    one_percent_goal = EncryptedTextField(blank=True, help_text="One small thing that would make today 1% better.")
 
     evening_mental_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
     evening_physical_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
@@ -116,40 +120,41 @@ class Entry(models.Model):
     # Part 1b: Stoic daily reflection (morning prep / evening review), per the
     # "Daily Stoic Journal" template — distinct from the Part 2 guided journal below.
     # The week's practice itself isn't stored per-entry; see the stoic_practice property.
-    morning_anxious_about = models.TextField(blank=True, help_text="What am I anxious about today?")
-    morning_within_control = models.TextField(blank=True, help_text="What part of this is 100% in my control?")
-    morning_reserve_clause = models.TextField(
+    morning_anxious_about = EncryptedTextField(blank=True, help_text="What am I anxious about today?")
+    morning_within_control = EncryptedTextField(blank=True, help_text="What part of this is 100% in my control?")
+    morning_reserve_clause = EncryptedTextField(
         blank=True, help_text="Today's biggest event, held with “Fate permitting.”"
     )
 
-    evening_did_well = models.TextField(blank=True, help_text="Where did I show patience, discipline, or focus?")
-    evening_where_falter = models.TextField(
+    evening_did_well = EncryptedTextField(blank=True, help_text="Where did I show patience, discipline, or focus?")
+    evening_where_falter = EncryptedTextField(
         blank=True, help_text="Did I lose my temper, complain, procrastinate, or let my ego take over?"
     )
-    evening_could_improve = models.TextField(
+    evening_could_improve = EncryptedTextField(
         blank=True, help_text="If I could rewrite today, how would my ideal self respond to those exact situations?"
     )
-    evening_gratitude_audit = models.TextField(
+    evening_gratitude_audit = EncryptedTextField(
         blank=True, help_text="One thing I'd deeply miss if it were permanently taken away tomorrow."
     )
 
     # Part 2: stoic guided journal
     stoic_prompt = models.ForeignKey(StoicPrompt, null=True, blank=True, on_delete=models.SET_NULL)
-    stoic_response = models.TextField(blank=True)
+    stoic_response = EncryptedTextField(blank=True)
 
     # Part 3: biblical devotional
     devotional_prompt = models.ForeignKey(DevotionalPrompt, null=True, blank=True, on_delete=models.SET_NULL)
-    devotional_response = models.TextField(blank=True)
+    devotional_response = EncryptedTextField(blank=True)
 
     # Part 4: freeform journal
-    freeform_entry = models.TextField(blank=True)
+    freeform_entry = EncryptedTextField(blank=True)
 
     # Part 5: introspection
-    introspection_response = models.TextField(blank=True)
+    introspection_response = EncryptedTextField(blank=True)
 
     class Meta:
         ordering = ["-date"]
         verbose_name_plural = "entries"
+        constraints = [models.UniqueConstraint(fields=["user", "date"], name="unique_entry_per_user_per_date")]
 
     def __str__(self):
         return self.date.isoformat()
@@ -188,7 +193,7 @@ class Entry(models.Model):
 
 class Goal(models.Model):
     entry = models.ForeignKey(Entry, related_name="goals", on_delete=models.CASCADE)
-    text = models.CharField(max_length=300)
+    text = EncryptedTextField()
     completed = models.BooleanField(default=False)
     order = models.PositiveSmallIntegerField(default=0)
 
@@ -216,9 +221,10 @@ EMOTION_CHOICES = [
 
 
 class MomentCheckIn(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="moment_checkins")
     created_at = models.DateTimeField(default=timezone.now)
     emotions = models.CharField(max_length=300, blank=True, help_text="Comma-separated emotion tags.")
-    note = models.TextField(blank=True, help_text="What are you feeling, and why?")
+    note = EncryptedTextField(blank=True, help_text="What are you feeling, and why?")
     entry = models.ForeignKey(Entry, related_name="moments", null=True, blank=True, on_delete=models.SET_NULL)
 
     class Meta:

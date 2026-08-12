@@ -31,16 +31,18 @@ JOURNAL_TYPES = {
 }
 
 
-def _next_stoic_prompt():
+def _next_stoic_prompt(user):
     active = StoicPrompt.objects.filter(active=True)
-    used_ids = Entry.objects.exclude(stoic_prompt__isnull=True).values_list("stoic_prompt_id", flat=True)
+    used_ids = Entry.objects.filter(user=user).exclude(stoic_prompt__isnull=True).values_list(
+        "stoic_prompt_id", flat=True
+    )
     unused = active.exclude(id__in=used_ids)
-    # Once every active prompt has appeared in some entry, the cycle resets.
+    # Once every active prompt has appeared in some entry of this user's, the cycle resets.
     pool = unused if unused.exists() else active
     return pool.order_by("?").first()
 
 
-def _next_devotional_prompt():
+def _next_devotional_prompt(user=None):
     return DevotionalPrompt.objects.filter(active=True).order_by("?").first()
 
 
@@ -51,17 +53,18 @@ _PROMPT_PICKERS = {
 }
 
 
-def _entries_for_journal_type(journal_type):
-    """All entries, or entries with non-blank content for one JOURNAL_TYPES section."""
+def _entries_for_journal_type(journal_type, user):
+    """All of a user's entries, or entries with non-blank content for one JOURNAL_TYPES section."""
+    entries = Entry.objects.filter(user=user)
     if journal_type == "stoic":
-        return Entry.objects.exclude(stoic_response="")
+        return entries.exclude(stoic_response="")
     if journal_type == "devotional":
-        return Entry.objects.exclude(devotional_response="")
+        return entries.exclude(devotional_response="")
     if journal_type == "freeform":
-        return Entry.objects.exclude(freeform_entry="")
+        return entries.exclude(freeform_entry="")
     if journal_type == "introspection":
-        return Entry.objects.exclude(introspection_response="")
-    return Entry.objects.all()
+        return entries.exclude(introspection_response="")
+    return entries
 
 
 class EntryListView(TemplateView):
@@ -79,18 +82,18 @@ class JournalTypeListView(ListView):
         journal_type = self.kwargs["journal_type"]
         if journal_type not in JOURNAL_TYPES:
             raise Http404
-        return _entries_for_journal_type(journal_type)
+        return _entries_for_journal_type(journal_type, self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         journal_type = self.kwargs["journal_type"]
         context["journal_type"] = journal_type
         context["journal_label"] = JOURNAL_TYPES[journal_type]["label"]
-        today_entry = Entry.objects.filter(date=timezone.localdate()).first()
+        today_entry = Entry.objects.filter(user=self.request.user, date=timezone.localdate()).first()
         if today_entry and journal_type in _PROMPT_PICKERS:
             field_name, pick_prompt = _PROMPT_PICKERS[journal_type]
             if getattr(today_entry, f"{field_name}_id") is None:
-                prompt = pick_prompt()
+                prompt = pick_prompt(self.request.user)
                 if prompt:
                     setattr(today_entry, field_name, prompt)
                     today_entry.save(update_fields=[field_name])
@@ -105,6 +108,9 @@ class JournalTypeListView(ListView):
 class EntryDetailView(DetailView):
     model = Entry
     context_object_name = "entry"
+
+    def get_queryset(self):
+        return Entry.objects.filter(user=self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -129,6 +135,14 @@ class EntryFormMixin:
     form_class = EntryForm
     template_name = "entries/entry_form.html"
 
+    def get_queryset(self):
+        return Entry.objects.filter(user=self.request.user)
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.instance.user = self.request.user
+        return form
+
     def _journal_type_param(self):
         value = self.request.GET.get("type") or self.request.POST.get("type")
         return value if value in JOURNAL_TYPES else None
@@ -148,8 +162,8 @@ class EntryCreateView(EntryFormMixin, CreateView):
     def get_initial(self):
         initial = super().get_initial()
         initial["date"] = self.request.GET.get("date") or timezone.localdate()
-        stoic = _next_stoic_prompt()
-        devotional = _next_devotional_prompt()
+        stoic = _next_stoic_prompt(self.request.user)
+        devotional = _next_devotional_prompt(self.request.user)
         if stoic:
             initial["stoic_prompt"] = stoic
         if devotional:
@@ -205,7 +219,7 @@ def calendar_view(request, year=None, month=None):
 
     entries_by_day = {
         entry.date.day: entry
-        for entry in Entry.objects.filter(date__year=year, date__month=month)
+        for entry in Entry.objects.filter(user=request.user, date__year=year, date__month=month)
         .select_related("stoic_prompt", "devotional_prompt")
         .prefetch_related("goals")
     }
@@ -243,8 +257,8 @@ def calendar_view(request, year=None, month=None):
     return render(request, "entries/calendar.html", context)
 
 
-def _today_entry():
-    entry, _ = Entry.objects.get_or_create(date=timezone.localdate())
+def _today_entry(user):
+    entry, _ = Entry.objects.get_or_create(user=user, date=timezone.localdate())
     return entry
 
 
@@ -253,7 +267,7 @@ def checkin_view(request):
 
 
 def checkin_morning_view(request):
-    entry = _today_entry()
+    entry = _today_entry(request.user)
     if not entry.weather_summary:
         summary = get_current_weather()
         if summary:
@@ -287,7 +301,7 @@ def checkin_morning_view(request):
 
 
 def checkin_evening_view(request):
-    entry = _today_entry()
+    entry = _today_entry(request.user)
 
     if request.method == "POST":
         form = EveningCheckInForm(request.POST, instance=entry)
@@ -323,9 +337,10 @@ def checkin_moment_view(request):
         form = MomentCheckInForm(request.POST)
         if form.is_valid():
             MomentCheckIn.objects.create(
+                user=request.user,
                 emotions=",".join(form.cleaned_data["emotions"]),
                 note=form.cleaned_data["note"],
-                entry=Entry.objects.filter(date=timezone.localdate()).first(),
+                entry=Entry.objects.filter(user=request.user, date=timezone.localdate()).first(),
             )
             return redirect("entries:checkin-moment")
     else:
@@ -336,7 +351,7 @@ def checkin_moment_view(request):
         "entries/checkin_moment.html",
         {
             "form": form,
-            "recent_moments": MomentCheckIn.objects.all()[:10],
+            "recent_moments": MomentCheckIn.objects.filter(user=request.user)[:10],
             "now": timezone.localtime(),
             "today_prayer": Prayer.for_date(timezone.localdate()),
         },
@@ -353,7 +368,7 @@ class EntryExportSelectView(ListView):
     template_name = "entries/export_select.html"
 
     def get_queryset(self):
-        return _entries_for_journal_type(_clean_journal_type(self.request.GET.get("type")))
+        return _entries_for_journal_type(_clean_journal_type(self.request.GET.get("type")), self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -365,7 +380,7 @@ class EntryExportSelectView(ListView):
 def export_pdf_view(request):
     ids = request.POST.getlist("ids") or request.GET.getlist("ids")
     journal_type = _clean_journal_type(request.POST.get("type") or request.GET.get("type"))
-    entries = Entry.objects.filter(pk__in=ids).order_by("date")
+    entries = Entry.objects.filter(user=request.user, pk__in=ids).order_by("date")
 
     if not entries.exists():
         messages.error(request, "No entries selected to export.")

@@ -4,56 +4,93 @@
     <meta charset="UTF-8">
     <title>Log in - Journal</title>
     <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #fbf9f4;
+            --surface: #ffffff;
+            --text: #2b2b28;
+            --border: #ddd6c8;
+            --input-border: #ccc;
+            --accent: #5b4636;
+            --accent-hover: #47372a;
+            --accent-contrast: #ffffff;
+            --error: #a33;
+            --shadow: rgba(43, 43, 40, 0.1);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1c1a16;
+                --surface: #26221c;
+                --text: #ece6d8;
+                --border: #3d372c;
+                --input-border: #4a4335;
+                --accent: #d9b98a;
+                --accent-hover: #e8cca0;
+                --accent-contrast: #1c1a16;
+                --error: #e07a84;
+                --shadow: rgba(0, 0, 0, 0.4);
+            }
+        }
+        * { box-sizing: border-box; }
         body {
             font-family: Georgia, 'Times New Roman', serif;
-            color: #2b2b28;
-            background: #fbf9f4;
+            color: var(--text);
+            background: var(--bg);
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             margin: 0;
+            padding: 1.5rem;
         }
         .login-card {
-            background: #fff;
-            border: 1px solid #ddd6c8;
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 2rem 2.25rem;
             width: 100%;
             max-width: 320px;
-            box-sizing: border-box;
+            box-shadow: 0 4px 20px var(--shadow);
         }
         h1 {
             font-size: 1.3rem;
             margin: 0 0 1.5rem;
-            color: #5b4636;
+            color: var(--accent);
             text-align: center;
         }
         label { display: block; margin-top: 0.75rem; font-weight: bold; }
         input[type=text], input[type=password] {
             width: 100%;
-            box-sizing: border-box;
-            padding: 0.4rem;
+            padding: 0.5rem 0.6rem;
             margin-top: 0.25rem;
             font-family: inherit;
             font-size: 1rem;
-            border: 1px solid #ccc;
+            color: var(--text);
+            background: var(--surface);
+            border: 1px solid var(--input-border);
             border-radius: 4px;
+        }
+        input[type=text]:focus, input[type=password]:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+            border-color: var(--accent);
         }
         .btn {
             display: block;
             width: 100%;
             margin-top: 1.5rem;
             padding: 0.6rem 1.2rem;
-            background: #5b4636;
-            color: #fff;
+            background: var(--accent);
+            color: var(--accent-contrast);
             text-decoration: none;
             border: none;
             border-radius: 4px;
             font-size: 1rem;
             cursor: pointer;
+            transition: background 0.15s ease;
         }
-        .errorlist { color: #a33; list-style: none; padding: 0; margin: 0.75rem 0 0; font-size: 0.9rem; }
+        .btn:hover { background: var(--accent-hover); }
+        .errorlist { color: var(--error); list-style: none; padding: 0; margin: 0.75rem 0 0; font-size: 0.9rem; }
     </style>
 </head>
 <body>

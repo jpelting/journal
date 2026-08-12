@@ -9,6 +9,7 @@
         <a href="{% url 'entries:calendar' next_year next_month %}">Next &raquo;</a>
     </div>
 
+    <div class="calendar-scroll">
     <table class="calendar">
         <thead>
             <tr>
@@ -20,7 +21,7 @@
                 <tr>
                     {% for day in week %}
                         {% if day %}
-                            <td class="cal-day{% if day.is_today %} today{% endif %}"{% if day.bg_color %} style="background:{{ day.bg_color }};"{% endif %}>
+                            <td class="cal-day{% if day.is_today %} today{% endif %}{% if day.bg_color %} has-mood-bg{% endif %}"{% if day.bg_color %} style="background:{{ day.bg_color }};"{% endif %}>
                                 {% if day.entry %}
                                     <a href="{{ day.entry.get_absolute_url }}" class="cal-day-link" data-entry-id="{{ day.entry.pk }}">{{ day.day }}</a>
                                     <div class="cal-scores">
@@ -41,6 +42,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
 
     <div class="calendar-legend">
         <span class="legend-item"><span class="legend-swatch" style="background: hsl(10, 45%, 85%);"></span>1&ndash;2</span>

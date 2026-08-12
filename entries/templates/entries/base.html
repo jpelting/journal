@@ -4,19 +4,65 @@
     <meta charset="UTF-8">
     <title>{% block title %}Journal{% endblock %}</title>
     <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #fbf9f4;
+            --bg-subtle: #f3efe4;
+            --surface: #ffffff;
+            --text: #2b2b28;
+            --text-muted: #7a6a55;
+            --border: #ddd6c8;
+            --border-subtle: #eee2cf;
+            --accent: #5b4636;
+            --accent-hover: #47372a;
+            --accent-contrast: #ffffff;
+            --danger-bg: #f8d7da;
+            --danger-text: #7a2e2e;
+            --danger-border: #f1b0b7;
+            --shadow: rgba(43, 43, 40, 0.08);
+            --overlay: rgba(43, 43, 40, 0.55);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1c1a16;
+                --bg-subtle: #221f19;
+                --surface: #26221c;
+                --text: #ece6d8;
+                --text-muted: #b4a68c;
+                --border: #3d372c;
+                --border-subtle: #322d24;
+                --accent: #d9b98a;
+                --accent-hover: #e8cca0;
+                --accent-contrast: #1c1a16;
+                --danger-bg: #4a2326;
+                --danger-text: #f3b4ba;
+                --danger-border: #6b2f34;
+                --shadow: rgba(0, 0, 0, 0.35);
+                --overlay: rgba(0, 0, 0, 0.65);
+            }
+        }
+        * { box-sizing: border-box; }
         body {
             font-family: Georgia, 'Times New Roman', serif;
             max-width: 760px;
             margin: 0 auto;
-            padding: 2rem 1rem 4rem;
+            padding: 1.5rem 1rem 4rem;
             line-height: 1.5;
-            color: #2b2b28;
-            background: #fbf9f4;
+            color: var(--text);
+            background: var(--bg);
         }
         body.wide { max-width: 1200px; }
-        a { color: #5b4636; }
-        nav { margin-bottom: 2rem; border-bottom: 1px solid #ddd6c8; padding-bottom: 1rem; display: flex; align-items: center; }
-        nav a { margin-right: 1rem; text-decoration: none; font-weight: bold; }
+        a { color: var(--accent); }
+        nav {
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 1.25rem;
+        }
+        nav a { text-decoration: none; font-weight: bold; }
         nav .logout-form { margin-left: auto; }
         nav .logout-form button {
             background: none;
@@ -24,79 +70,127 @@
             padding: 0;
             font: inherit;
             font-weight: bold;
-            color: #5b4636;
+            color: var(--accent);
             text-decoration: none;
             cursor: pointer;
         }
         h1, h2, h3 { font-family: 'Georgia', serif; }
         section.part {
-            border: 1px solid #ddd6c8;
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 1rem 1.25rem;
             margin-bottom: 1.5rem;
-            background: #fff;
+            background: var(--surface);
+            box-shadow: 0 1px 3px var(--shadow);
         }
-        section.part h2 { margin-top: 0; font-size: 1.1rem; color: #5b4636; }
-        section.part h3 { font-size: 0.95rem; color: #5b4636; margin-bottom: 0.25rem; }
+        section.part h2 { margin-top: 0; font-size: 1.1rem; color: var(--accent); }
+        section.part h3 { font-size: 0.95rem; color: var(--accent); margin-bottom: 0.25rem; }
         label { display: block; margin-top: 0.75rem; font-weight: bold; }
         input[type=text], input[type=date], input[type=number], textarea, select {
             width: 100%;
             box-sizing: border-box;
-            padding: 0.4rem;
+            padding: 0.5rem 0.6rem;
             margin-top: 0.25rem;
             font-family: inherit;
             font-size: 1rem;
-            border: 1px solid #ccc;
+            color: var(--text);
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 4px;
+            transition: border-color 0.15s ease;
         }
-        input.slider { width: 100%; }
+        input[type=text]:focus, input[type=date]:focus, input[type=number]:focus, textarea:focus, select:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+            border-color: var(--accent);
+        }
+        .dictate-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-top: 0.4rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+        }
+        .dictate-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .dictate-btn.listening {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: var(--accent-contrast);
+            animation: dictate-pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes dictate-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        input.slider { width: 100%; accent-color: var(--accent); }
         .slider-row { display: flex; align-items: center; gap: 0.75rem; }
         .slider-row output { min-width: 1.5rem; text-align: right; font-weight: bold; }
         .journals-title { text-align: center; }
         .journal-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1.5rem; }
         .journal-tile {
             display: block;
-            border: 1px solid #ddd6c8;
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 1.25rem 1.5rem;
-            background: #fff;
+            background: var(--surface);
             text-decoration: none;
             color: inherit;
-            transition: border-color 0.15s ease;
+            box-shadow: 0 1px 3px var(--shadow);
+            transition: border-color 0.15s ease, transform 0.15s ease;
         }
-        .journal-tile:hover { border-color: #5b4636; }
-        .journal-tile h2 { margin: 0 0 0.35rem; font-size: 1.05rem; color: #5b4636; }
+        .journal-tile:hover { border-color: var(--accent); transform: translateY(-1px); }
+        .journal-tile h2 { margin: 0 0 0.35rem; font-size: 1.05rem; color: var(--accent); }
         .journal-tile p { margin: 0; }
-        @media (max-width: 480px) { .journal-tiles { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { .journal-tiles { grid-template-columns: 1fr; } }
 
         .entry-list { list-style: none; padding: 0; }
-        .entry-list li { padding: 0.5rem 0; border-bottom: 1px solid #eee2cf; }
-        .scores { color: #7a6a55; font-size: 0.9rem; }
+        .entry-list li { padding: 0.5rem 0; border-bottom: 1px solid var(--border-subtle); }
+        .scores { color: var(--text-muted); font-size: 0.9rem; }
         .btn {
             display: inline-block;
             margin-top: 1rem;
             padding: 0.6rem 1.2rem;
-            background: #5b4636;
-            color: #fff;
+            background: var(--accent);
+            color: var(--accent-contrast);
             text-decoration: none;
             border: none;
             border-radius: 4px;
             font-size: 1rem;
             cursor: pointer;
+            transition: background 0.15s ease;
         }
-        .prompt { font-style: italic; color: #5b4636; margin-top: 0.25rem; }
-        .helptext { font-size: 0.85rem; color: #888; }
-        .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .btn:hover { background: var(--accent-hover); }
+        .prompt { font-style: italic; color: var(--accent); margin-top: 0.25rem; }
+        .helptext { font-size: 0.85rem; color: var(--text-muted); }
+        .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 0.5rem; }
         .calendar-nav a { font-size: 1.1rem; padding: 0.3rem 0.6rem; }
-        table.calendar { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        table.calendar th { padding: 0.6rem 0; font-size: 0.95rem; color: #7a6a55; border-bottom: 1px solid #ddd6c8; }
-        table.calendar td { border: 1px solid #eee2cf; height: 8rem; vertical-align: top; padding: 0.5rem; }
-        table.calendar td.cal-empty { background: #f3efe4; border-color: #f3efe4; }
-        table.calendar td.today { outline: 3px solid #5b4636; outline-offset: -3px; }
-        table.calendar td a { text-decoration: none; font-weight: bold; color: #2b2b28; font-size: 1.15rem; }
-        table.calendar td .cal-add { color: #a99c86; font-weight: normal; }
-        table.calendar .cal-scores { font-size: 0.85rem; color: #5b4636; margin-top: 0.4rem; line-height: 1.4; }
-        .calendar-legend { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; font-size: 0.85rem; color: #7a6a55; }
+        .calendar-scroll { overflow-x: auto; }
+        table.calendar { width: 100%; min-width: 560px; border-collapse: collapse; table-layout: fixed; }
+        table.calendar th { padding: 0.6rem 0; font-size: 0.95rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+        table.calendar td { border: 1px solid var(--border-subtle); height: 8rem; vertical-align: top; padding: 0.5rem; }
+        table.calendar td.cal-empty { background: var(--bg-subtle); border-color: var(--bg-subtle); }
+        table.calendar td.today { outline: 3px solid var(--accent); outline-offset: -3px; }
+        table.calendar td a { text-decoration: none; font-weight: bold; color: var(--text); font-size: 1.15rem; }
+        table.calendar td .cal-add { color: var(--text-muted); font-weight: normal; }
+        table.calendar .cal-scores { font-size: 0.85rem; color: var(--accent); margin-top: 0.4rem; line-height: 1.4; }
+        /* Mood-color cells always get a pale swatch background regardless of site theme,
+           so their text needs a fixed dark color rather than the theme-aware default above. */
+        table.calendar td.has-mood-bg a { color: #2b2b28; }
+        table.calendar td.has-mood-bg .cal-scores { color: #47372a; }
+        @media (max-width: 600px) {
+            table.calendar td { height: 5.5rem; padding: 0.35rem; }
+            table.calendar td a { font-size: 1rem; }
+            table.calendar .cal-scores { font-size: 0.75rem; }
+        }
+        .calendar-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); }
         .calendar-legend .legend-note { font-style: italic; }
         .legend-item { display: flex; align-items: center; gap: 0.4rem; }
         .legend-swatch {
@@ -104,36 +198,38 @@
             width: 0.9rem;
             height: 0.9rem;
             border-radius: 4px;
-            border: 1px solid #ddd6c8;
+            border: 1px solid var(--border);
         }
-        .checkin-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .checkin-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
         .checkin-tabs a {
             padding: 0.5rem 1rem;
             border-radius: 6px;
-            background: #fff;
-            border: 1px solid #ddd6c8;
+            background: var(--surface);
+            border: 1px solid var(--border);
             text-decoration: none;
             font-weight: bold;
-            color: #5b4636;
+            color: var(--accent);
+            transition: background 0.15s ease, color 0.15s ease;
         }
-        .checkin-tabs a.active { background: #5b4636; color: #fff; border-color: #5b4636; }
+        .checkin-tabs a.active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
         .checkin-tabs .btn-prayer {
             margin-left: auto;
             padding: 0.5rem 1rem;
             border-radius: 6px;
-            background: #fff;
-            border: 1px solid #ddd6c8;
+            background: var(--surface);
+            border: 1px solid var(--border);
             font-family: inherit;
             font-size: 1rem;
             font-weight: bold;
-            color: #5b4636;
+            color: var(--accent);
             cursor: pointer;
+            transition: border-color 0.15s ease;
         }
-        .checkin-tabs .btn-prayer:hover { border-color: #5b4636; }
+        .checkin-tabs .btn-prayer:hover { border-color: var(--accent); }
         .tab-section { display: none; }
         .tab-section.active { display: block; }
         .checkin-header { text-align: center; margin-bottom: 1.5rem; }
-        .checkin-meta { color: #7a6a55; font-size: 0.9rem; margin-top: -0.5rem; }
+        .checkin-meta { color: var(--text-muted); font-size: 0.9rem; margin-top: -0.5rem; }
 
         .weather-anim-wrap { margin: 0.5rem 0; }
         .weather-anim { vertical-align: middle; }
@@ -194,25 +290,27 @@
             align-items: center;
             gap: 0.4rem;
             padding: 0.4rem 0.8rem;
-            border: 1px solid #ddd6c8;
+            border: 1px solid var(--border);
             border-radius: 999px;
-            background: #fff;
+            background: var(--surface);
             font-weight: normal;
             margin-top: 0;
             cursor: pointer;
+            transition: border-color 0.15s ease;
         }
+        .emotion-chip:hover { border-color: var(--accent); }
         .emotion-chip input { width: auto; margin: 0; }
 
-        .export-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid #eee2cf; }
+        .export-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border-subtle); }
         .export-row input[type=checkbox] { width: auto; margin: 0; }
-        .export-actions { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .export-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1rem; }
         .messages { list-style: none; padding: 0; margin-bottom: 1.5rem; }
-        .messages li { padding: 0.6rem 1rem; border-radius: 6px; background: #f8d7da; color: #7a2e2e; border: 1px solid #f1b0b7; }
+        .messages li { padding: 0.6rem 1rem; border-radius: 6px; background: var(--danger-bg); color: var(--danger-text); border: 1px solid var(--danger-border); }
 
         .modal-backdrop {
             position: fixed;
             inset: 0;
-            background: rgba(43, 43, 40, 0.55);
+            background: var(--overlay);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -221,7 +319,8 @@
         }
         .modal-backdrop[hidden] { display: none; }
         .modal {
-            background: #fbf9f4;
+            background: var(--bg);
+            color: var(--text);
             border-radius: 8px;
             max-width: 640px;
             width: 100%;
@@ -229,7 +328,7 @@
             overflow-y: auto;
             padding: 1.5rem 1.75rem;
             position: relative;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 10px 40px var(--shadow);
         }
         .modal-close {
             position: absolute;
@@ -240,10 +339,18 @@
             font-size: 1.5rem;
             line-height: 1;
             cursor: pointer;
-            color: #7a6a55;
+            color: var(--text-muted);
         }
         .modal h2 { margin-top: 0; }
-        .modal h3 { margin-bottom: 0.25rem; color: #5b4636; font-size: 1rem; }
+        .modal h3 { margin-bottom: 0.25rem; color: var(--accent); font-size: 1rem; }
+        @media (max-width: 600px) {
+            .modal-backdrop { padding: 0.75rem; }
+            .modal { padding: 1.1rem 1.25rem; }
+        }
+        @media (max-width: 600px) {
+            nav { gap: 0.4rem 0.9rem; }
+            table.calendar td { min-width: 4.5rem; }
+        }
     </style>
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
@@ -264,5 +371,81 @@
         </ul>
     {% endif %}
     {% block content %}{% endblock %}
+    <script>
+        (function () {
+            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+
+            var stopActive = null;
+
+            document.querySelectorAll('textarea').forEach(function (textarea) {
+                var button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'dictate-btn';
+                button.textContent = '🎤 Dictate';
+                button.setAttribute('aria-pressed', 'false');
+                textarea.insertAdjacentElement('afterend', button);
+
+                var recognition = null;
+                var listening = false;
+                var baseValue = '';
+
+                function setListening(value) {
+                    listening = value;
+                    button.classList.toggle('listening', value);
+                    button.setAttribute('aria-pressed', String(value));
+                    button.textContent = value ? '● Listening… (tap to stop)' : '🎤 Dictate';
+                    if (!value) stopActive = null;
+                }
+
+                function stop() {
+                    if (recognition) recognition.stop();
+                }
+
+                function start() {
+                    if (stopActive) stopActive();
+
+                    recognition = new SpeechRecognition();
+                    recognition.lang = document.documentElement.lang || 'en-US';
+                    recognition.continuous = true;
+                    recognition.interimResults = true;
+
+                    baseValue = textarea.value;
+                    if (baseValue && !/\s$/.test(baseValue)) baseValue += ' ';
+
+                    recognition.onresult = function (event) {
+                        var finalTranscript = '';
+                        var interimTranscript = '';
+                        for (var i = event.resultIndex; i < event.results.length; i++) {
+                            var transcript = event.results[i][0].transcript;
+                            if (event.results[i].isFinal) {
+                                finalTranscript += transcript + ' ';
+                            } else {
+                                interimTranscript += transcript;
+                            }
+                        }
+                        if (finalTranscript) baseValue += finalTranscript;
+                        textarea.value = baseValue + interimTranscript;
+                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    };
+
+                    recognition.onerror = function () { setListening(false); };
+                    recognition.onend = function () { setListening(false); };
+
+                    recognition.start();
+                    stopActive = stop;
+                    setListening(true);
+                }
+
+                button.addEventListener('click', function () {
+                    if (listening) {
+                        stop();
+                    } else {
+                        start();
+                    }
+                });
+            });
+        })();
+    </script>
 </body>
 </html>

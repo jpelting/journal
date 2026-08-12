@@ -8,23 +8,23 @@ A personal Django journaling app. A single `Entry` per calendar date holds five 
 
 ## Commands
 
-Run everything through the venv interpreter (no global Django install):
+Run everything through `uv run` (manages the venv and dependencies automatically from `pyproject.toml`/`uv.lock`):
 
 ```
-venv/Scripts/python.exe manage.py runserver
-venv/Scripts/python.exe manage.py test
-venv/Scripts/python.exe manage.py test entries.tests.SomeTestCase.test_name  # single test
-venv/Scripts/python.exe manage.py makemigrations entries
-venv/Scripts/python.exe manage.py migrate
-venv/Scripts/python.exe manage.py check
-venv/Scripts/python.exe manage.py seed_stoic_prompts          # idempotent load from entries/data/stoic_prompts.json
-venv/Scripts/python.exe manage.py seed_devotional_prompts     # idempotent load from entries/data/devotional_prompts.json
-venv/Scripts/python.exe manage.py seed_introspection_prompts  # idempotent load from entries/data/introspection_prompts.json (365 questions, one per day-of-year)
-venv/Scripts/python.exe manage.py seed_prayers               # idempotent load from entries/data/prayers.json (366 prayers, one per calendar day incl. Feb 29)
-venv/Scripts/python.exe manage.py seed_stoic_practices        # idempotent load from entries/data/stoic_practices.json (52 weekly practices)
+uv run manage.py runserver
+uv run manage.py test
+uv run manage.py test entries.tests.SomeTestCase.test_name  # single test
+uv run manage.py makemigrations entries
+uv run manage.py migrate
+uv run manage.py check
+uv run manage.py seed_stoic_prompts          # idempotent load from entries/data/stoic_prompts.json
+uv run manage.py seed_devotional_prompts     # idempotent load from entries/data/devotional_prompts.json
+uv run manage.py seed_introspection_prompts  # idempotent load from entries/data/introspection_prompts.json (365 questions, one per day-of-year)
+uv run manage.py seed_prayers               # idempotent load from entries/data/prayers.json (366 prayers, one per calendar day incl. Feb 29)
+uv run manage.py seed_stoic_practices        # idempotent load from entries/data/stoic_practices.json (52 weekly practices)
 ```
 
-There is no `requirements.txt` — the venv already has Django, asgiref, sqlparse, tzdata, and xhtml2pdf (plus its dependencies: reportlab, Pillow, html5lib, etc. — pulled in for PDF export) installed. If dependencies need to change, update the venv directly (`venv/Scripts/pip.exe install ...`) since there's currently no manifest to keep in sync.
+Dependencies (Django, xhtml2pdf, django-debug-toolbar, cryptography, dj-database-url, psycopg, whitenoise, plus transitive deps like reportlab/Pillow/html5lib pulled in for PDF export) are declared in `pyproject.toml` and pinned in `uv.lock`. To add or change a dependency, use `uv add <package>` / `uv remove <package>` rather than editing `pyproject.toml` by hand, so the lockfile stays in sync.
 
 `entries/bible.py` calls the real YouVersion Platform API (`api.youversion.com`), which needs a free App Key from https://platform.youversion.com. Set it as an env var before running anything that creates `DevotionalPrompt` rows: `YVP_APP_KEY=... venv/Scripts/python.exe manage.py ...`. Without it, verse-text fetches silently no-op (see below) — the app still works, prompts just show without verse text.
 

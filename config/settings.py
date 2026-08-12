@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,13 +23,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-0a8qxqx6)%5zpwn1&yc#$y1+k6sqs+t=4a!if+gy#swc)xo6q8'
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+# SECURITY WARNING: keep the secret key used in production secret! This
+# dev-only default is already public (it's committed in this repo's git
+# history), so a production deploy MUST set DJANGO_SECRET_KEY explicitly —
+# the guard below refuses to start otherwise. Generate one with:
+#   python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+_DEV_SECRET_KEY = 'django-insecure-0a8qxqx6)%5zpwn1&yc#$y1+k6sqs+t=4a!if+gy#swc)xo6q8'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', _DEV_SECRET_KEY)
+
+if not DEBUG and SECRET_KEY == _DEV_SECRET_KEY:
+    raise ImproperlyConfigured(
+        'DJANGO_SECRET_KEY must be set to a real, privately-generated key in production. '
+        'Refusing to start with the dev-only default key (which is public in git history).'
+    )
+
+ALLOWED_HOSTS = [
+    host for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if host
+]
 
 
 # Application definition
@@ -43,6 +59,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -51,6 +68,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if DEBUG:
+    INSTALLED_APPS += ['debug_toolbar']
+    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+    INTERNAL_IPS = ['127.0.0.1']
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'entries:home'
@@ -79,12 +101,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {'default': dj_database_url.config(conn_max_age=600)}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
 
 
 # Password validation
@@ -122,6 +147,24 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
+
+
+# Production hardening — inert locally since DEBUG=True by default there.
+# SECURE_PROXY_SSL_HEADER is intentionally not set here: it depends on the
+# eventual host's TLS-termination setup (e.g. most PaaS hosts forward
+# X-Forwarded-Proto) and must be configured once that host is chosen.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 60
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 
 
 # Weather (used by the morning check-in page)
@@ -130,6 +173,28 @@ WEATHER_LOCATION_NAME = 'Mount Holly, NC'
 WEATHER_LATITUDE = 35.29819
 WEATHER_LONGITUDE = -81.01591
 WEATHER_TIMEZONE = 'America/New_York'
+
+
+# Field-level encryption for journal content (see entries/fields.py). Keys are
+# comma-separated, newest first — MultiFernet encrypts with the first key and
+# tries each in turn to decrypt, so old ciphertext keeps working after rotation.
+# The dev-only default below must NEVER be used in production: if it is, every
+# encrypted row becomes unrecoverable the moment someone rotates or loses it.
+# Generate a real key with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# and store it (and back it up somewhere durable, separate from the deploy
+# host) as the FIELD_ENCRYPTION_KEYS env var. Losing this key permanently
+# loses every user's journal content — there is no recovery path.
+_DEV_FIELD_ENCRYPTION_KEY = 'ts_rr8XS8pdufcswNsIkqaD8OPJ0vln8RBI71eN1nNU='
+FIELD_ENCRYPTION_KEYS = [
+    key for key in os.environ.get('FIELD_ENCRYPTION_KEYS', _DEV_FIELD_ENCRYPTION_KEY).split(',') if key
+]
+
+if not DEBUG and _DEV_FIELD_ENCRYPTION_KEY in FIELD_ENCRYPTION_KEYS:
+    raise ImproperlyConfigured(
+        'FIELD_ENCRYPTION_KEYS must be set to a real, privately-generated key in production. '
+        'Refusing to start with the dev-only default key.'
+    )
 
 
 # Bible passage lookups (devotional verse text), via the YouVersion Platform API.

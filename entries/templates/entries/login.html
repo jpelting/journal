@@ -2,38 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Log in - Journal</title>
+    <title>Log in - The Wax Tablet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            color-scheme: light dark;
-            --bg: #fbf9f4;
-            --surface: #ffffff;
-            --text: #2b2b28;
-            --border: #ddd6c8;
-            --input-border: #ccc;
-            --accent: #5b4636;
-            --accent-hover: #47372a;
-            --accent-contrast: #ffffff;
-            --error: #a33;
-            --shadow: rgba(43, 43, 40, 0.1);
-        }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #1c1a16;
-                --surface: #26221c;
-                --text: #ece6d8;
-                --border: #3d372c;
-                --input-border: #4a4335;
-                --accent: #d9b98a;
-                --accent-hover: #e8cca0;
-                --accent-contrast: #1c1a16;
-                --error: #e07a84;
-                --shadow: rgba(0, 0, 0, 0.4);
-            }
+            color-scheme: dark;
+            {% include "entries/_theme_vars.html" %}
         }
         * { box-sizing: border-box; }
         body {
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             color: var(--text);
             background: var(--bg);
             display: flex;
@@ -44,19 +24,22 @@
             padding: 1.5rem;
         }
         .login-card {
-            background: var(--surface);
+            background: var(--wax-surface);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 2rem 2.25rem;
             width: 100%;
             max-width: 320px;
-            box-shadow: 0 4px 20px var(--shadow);
+            box-shadow: var(--engrave-shadow), 0 4px 20px var(--shadow);
         }
         h1 {
+            font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
             font-size: 1.3rem;
             margin: 0 0 1.5rem;
             color: var(--accent);
             text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
         }
         label { display: block; margin-top: 0.75rem; font-weight: bold; }
         input[type=text], input[type=password] {
@@ -67,8 +50,9 @@
             font-size: 1rem;
             color: var(--text);
             background: var(--surface);
-            border: 1px solid var(--input-border);
+            border: 1px solid var(--border);
             border-radius: 4px;
+            cursor: var(--stylus-cursor);
         }
         input[type=text]:focus, input[type=password]:focus {
             outline: 2px solid var(--accent);
@@ -87,15 +71,16 @@
             border-radius: 4px;
             font-size: 1rem;
             cursor: pointer;
-            transition: background 0.15s ease;
+            box-shadow: 0 0 16px 1px rgba(198, 139, 69, 0.35);
+            transition: background 0.15s ease, box-shadow 0.15s ease;
         }
-        .btn:hover { background: var(--accent-hover); }
-        .errorlist { color: var(--error); list-style: none; padding: 0; margin: 0.75rem 0 0; font-size: 0.9rem; }
+        .btn:hover { background: var(--accent-hover); box-shadow: 0 0 22px 3px rgba(198, 139, 69, 0.5); }
+        .errorlist { color: var(--danger-text); list-style: none; padding: 0; margin: 0.75rem 0 0; font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <div class="login-card">
-        <h1>Journal</h1>
+        <h1>The Wax Tablet</h1>
         <form method="post">
             {% csrf_token %}
             {{ form.non_field_errors }}
@@ -108,6 +93,9 @@
             <input type="hidden" name="next" value="{{ next }}">
             <button type="submit" class="btn">Log in</button>
         </form>
+        <p style="text-align: center; margin-top: 1.25rem; font-size: 0.9rem;">
+            <a href="{% url 'signup' %}">New here? Create an account</a>
+        </p>
     </div>
 </body>
 </html>

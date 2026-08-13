@@ -8,6 +8,7 @@ from .models import (
     IntrospectionPrompt,
     MomentCheckIn,
     Prayer,
+    Profile,
     StoicPractice,
     StoicPrompt,
 )
@@ -135,6 +136,11 @@ class PrayerAdmin(admin.ModelAdmin):
 class StoicPracticeAdmin(admin.ModelAdmin):
     list_display = ["week_number", "part", "title"]
     ordering = ["week_number"]
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ["name", "user", "age", "gender", "zipcode"]
 
 
 @admin.register(MomentCheckIn)

@@ -5,6 +5,7 @@
     <div class="journal-tiles">
         {% for type_key, type_info in journal_types.items %}
             <a class="journal-tile" href="{% url 'entries:journal-type' journal_type=type_key %}">
+                {% include "entries/_journal_icon.html" with type_key=type_key %}
                 <h2>{{ type_info.label }}</h2>
                 <p class="helptext">{{ type_info.description }}</p>
             </a>

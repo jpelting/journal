@@ -220,6 +220,32 @@ EMOTION_CHOICES = [
 ]
 
 
+class Profile(models.Model):
+    GENDER_CHOICES = [
+        ("female", "Female"),
+        ("male", "Male"),
+        ("nonbinary", "Non-binary"),
+        ("self_describe", "Self-describe"),
+        ("prefer_not_to_say", "Prefer not to say"),
+    ]
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
+    name = models.CharField(max_length=150)
+    date_of_birth = models.DateField()
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES)
+    gender_self_description = models.CharField(max_length=100, blank=True)
+    zipcode = models.CharField(max_length=10)
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def age(self):
+        today = timezone.localdate()
+        dob = self.date_of_birth
+        return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+
 class MomentCheckIn(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="moment_checkins")
     created_at = models.DateTimeField(default=timezone.now)

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign up - The Wax Tablet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark;
+            {% include "entries/_theme_vars.html" %}
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1.5rem;
+        }
+        .signup-card {
+            background: var(--wax-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem 2.25rem;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: var(--engrave-shadow), 0 4px 20px var(--shadow);
+        }
+        h1 {
+            font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+            font-size: 1.3rem;
+            margin: 0 0 1.5rem;
+            color: var(--accent);
+            text-align: center;
+        }
+        label { display: block; margin-top: 0.9rem; font-weight: bold; }
+        .helptext { font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0; }
+        input[type=text], input[type=password], input[type=date], select {
+            width: 100%;
+            padding: 0.5rem 0.6rem;
+            margin-top: 0.25rem;
+            font-family: inherit;
+            font-size: 1rem;
+            color: var(--text);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: var(--stylus-cursor);
+        }
+        input:focus, select:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+            border-color: var(--accent);
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            margin-top: 1.5rem;
+            padding: 0.6rem 1.2rem;
+            background: var(--accent);
+            color: var(--accent-contrast);
+            text-decoration: none;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 0 16px 1px rgba(198, 139, 69, 0.35);
+            transition: background 0.15s ease, box-shadow 0.15s ease;
+        }
+        .btn:hover { background: var(--accent-hover); box-shadow: 0 0 22px 3px rgba(198, 139, 69, 0.5); }
+        .link-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            margin-top: 0.4rem;
+            font: inherit;
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .password-suggestion {
+            display: none;
+            margin-top: 0.4rem;
+            padding: 0.5rem 0.6rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            word-break: break-all;
+        }
+        .password-suggestion.visible { display: block; }
+        .errorlist { color: var(--danger-text); list-style: none; padding: 0; margin: 0.4rem 0 0; font-size: 0.85rem; }
+        .field-row { margin-bottom: 0.25rem; }
+        .bottom-link { text-align: center; margin-top: 1.25rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="signup-card">
+        <h1>Create your account</h1>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <div class="field-row">
+                <label for="{{ form.name.id_for_label }}">Name</label>
+                {{ form.name }}
+                {{ form.name.errors }}
+            </div>
+
+            <div class="field-row">
+                <label for="{{ form.date_of_birth.id_for_label }}">Date of birth</label>
+                {{ form.date_of_birth }}
+                {{ form.date_of_birth.errors }}
+            </div>
+
+            <div class="field-row">
+                <label for="{{ form.gender.id_for_label }}">Gender</label>
+                {{ form.gender }}
+                {{ form.gender.errors }}
+            </div>
+
+            <div class="field-row" id="gender-self-describe-row">
+                <label for="{{ form.gender_self_description.id_for_label }}">Please describe</label>
+                {{ form.gender_self_description }}
+                {{ form.gender_self_description.errors }}
+            </div>
+
+            <div class="field-row">
+                <label for="{{ form.zipcode.id_for_label }}">Zip code</label>
+                {{ form.zipcode }}
+                {{ form.zipcode.errors }}
+            </div>
+
+            <div class="field-row">
+                <label for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+
+            <div class="field-row">
+                <label for="{{ form.password1.id_for_label }}">Password</label>
+                {{ form.password1 }}
+                {% if form.password1.help_text %}<p class="helptext">{{ form.password1.help_text|safe }}</p>{% endif %}
+                {{ form.password1.errors }}
+                <button type="button" class="link-btn" id="suggest-password-btn">Suggest a strong password</button>
+                <div class="password-suggestion" id="password-suggestion"></div>
+            </div>
+
+            <div class="field-row">
+                <label for="{{ form.password2.id_for_label }}">Confirm password</label>
+                {{ form.password2 }}
+                {{ form.password2.errors }}
+            </div>
+
+            <button type="submit" class="btn">Create account</button>
+        </form>
+        <p class="bottom-link"><a href="{% url 'login' %}">Already have an account? Log in</a></p>
+    </div>
+
+    <script>
+        var genderSelect = document.getElementById('{{ form.gender.id_for_label }}');
+        var selfDescribeRow = document.getElementById('gender-self-describe-row');
+
+        function syncSelfDescribeVisibility() {
+            selfDescribeRow.style.display = genderSelect.value === 'self_describe' ? 'block' : 'none';
+        }
+        genderSelect.addEventListener('change', syncSelfDescribeVisibility);
+        syncSelfDescribeVisibility();
+
+        function generateStrongPassword() {
+            var upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+            var lower = 'abcdefghijkmnpqrstuvwxyz';
+            var digits = '23456789';
+            var symbols = '!@#$%^&*-_=+';
+            var all = upper + lower + digits + symbols;
+            var randomChar = function (chars) {
+                var bytes = new Uint32Array(1);
+                crypto.getRandomValues(bytes);
+                return chars[bytes[0] % chars.length];
+            };
+            var required = [randomChar(upper), randomChar(lower), randomChar(digits), randomChar(symbols)];
+            var length = 16;
+            var chars = required.slice();
+            for (var i = required.length; i < length; i++) {
+                chars.push(randomChar(all));
+            }
+            for (var j = chars.length - 1; j > 0; j--) {
+                var k = new Uint32Array(1);
+                crypto.getRandomValues(k);
+                k = k[0] % (j + 1);
+                var tmp = chars[j];
+                chars[j] = chars[k];
+                chars[k] = tmp;
+            }
+            return chars.join('');
+        }
+
+        document.getElementById('suggest-password-btn').addEventListener('click', function () {
+            var password = generateStrongPassword();
+            var password1 = document.getElementById('{{ form.password1.id_for_label }}');
+            var password2 = document.getElementById('{{ form.password2.id_for_label }}');
+            password1.value = password;
+            password2.value = password;
+            var suggestionBox = document.getElementById('password-suggestion');
+            suggestionBox.textContent = password;
+            suggestionBox.classList.add('visible');
+        });
+    </script>
+</body>
+</html>

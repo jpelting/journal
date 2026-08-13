@@ -1,12 +1,12 @@
 {% extends "entries/base.html" %}
-{% block title %}{% if form.instance.pk %}Edit entry{% else %}New entry{% endif %} - Journal{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit entry{% else %}New entry{% endif %} - The Wax Tablet{% endblock %}
 {% block content %}
     {% if not form_journal_type %}
         <nav class="checkin-tabs entry-tabs">
-            <a href="#" data-tab="stoic" class="active">Stoic Journal</a>
-            <a href="#" data-tab="devotional">Devotional</a>
-            <a href="#" data-tab="freeform">Freeform</a>
-            <a href="#" data-tab="introspection">Introspection</a>
+            <a href="#" data-tab="stoic" class="active">{% include "entries/_journal_icon.html" with type_key="stoic" %}Stoic Journal</a>
+            <a href="#" data-tab="devotional">{% include "entries/_journal_icon.html" with type_key="devotional" %}Devotional</a>
+            <a href="#" data-tab="freeform">{% include "entries/_journal_icon.html" with type_key="freeform" %}Freeform</a>
+            <a href="#" data-tab="introspection">{% include "entries/_journal_icon.html" with type_key="introspection" %}Introspection</a>
         </nav>
     {% endif %}
 
@@ -17,9 +17,15 @@
         {{ form.non_field_errors }}
         {% if form_journal_type %}<input type="hidden" name="type" value="{{ form_journal_type }}">{% endif %}
 
-        <label for="{{ form.date.id_for_label }}">Date</label>
-        {{ form.date }}
-        {{ form.date.errors }}
+        <p class="date-display" id="date-display"{% if form.date.errors %} hidden{% endif %}>
+            {{ form_date|date:"l, F j, Y" }}
+            <button type="button" class="link-btn" id="date-edit-toggle">Edit date</button>
+        </p>
+        <div id="date-edit-wrap"{% if not form.date.errors %} hidden{% endif %}>
+            <label for="{{ form.date.id_for_label }}">Date</label>
+            {{ form.date }}
+            {{ form.date.errors }}
+        </div>
 
         <p class="helptext">Daily check-in (scores, goals, weather) now lives on the <a href="{% url 'entries:checkin' %}">Check-in</a> page.</p>
 
@@ -69,7 +75,7 @@
             {{ form.introspection_response }}
         </section>
 
-        <button class="btn" type="submit">Save entry</button>
+        <button class="btn" type="submit">Etch Entry</button>
     </form>
 
     {% if form_journal_type %}
@@ -77,6 +83,12 @@
     {% endif %}
 
     <script>
+        document.getElementById('date-edit-toggle').addEventListener('click', function () {
+            document.getElementById('date-display').hidden = true;
+            document.getElementById('date-edit-wrap').hidden = false;
+            document.getElementById('{{ form.date.id_for_label }}').focus();
+        });
+
         document.querySelectorAll('.entry-tabs a').forEach(function (tab) {
             tab.addEventListener('click', function (e) {
                 e.preventDefault();

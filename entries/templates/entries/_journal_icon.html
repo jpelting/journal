@@ -1,0 +1,30 @@
+<span class="type-medallion" aria-hidden="true">
+    {% if type_key == "stoic" %}
+        <svg viewBox="0 0 48 48" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M10 10 L38 38 M2 2 L12 8 M36 40 L46 46" stroke-width="3.5"/>
+            <path d="M38 10 L10 38 M46 2 L36 8 M12 40 L2 46" stroke-width="3.5"/>
+            <path d="M24 6 L24 30 M15 14 L33 14" stroke-width="3"/>
+        </svg>
+    {% elif type_key == "devotional" %}
+        <svg viewBox="0 0 48 48" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M24 4 L42 10 V22 C42 34 34 41 24 44 C14 41 6 34 6 22 V10 Z"/>
+            <path d="M24 15 L24 33 M16 21 L32 21" stroke-width="3"/>
+            <circle cx="10" cy="9" r="1.4" fill="currentColor" stroke="none"/>
+            <circle cx="38" cy="9" r="1.4" fill="currentColor" stroke="none"/>
+            <circle cx="7" cy="22" r="1.4" fill="currentColor" stroke="none"/>
+            <circle cx="41" cy="22" r="1.4" fill="currentColor" stroke="none"/>
+        </svg>
+    {% elif type_key == "freeform" %}
+        <svg viewBox="0 0 48 48" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M38 6 C40 6 42 8 42 10 C42 14 30 28 20 36 L12 38 L14 30 C22 20 34 8 38 6 Z"/>
+            <path d="M12 38 L6 44" />
+            <path d="M20 15 C24 19 29 24 33 28" stroke-width="1.6" opacity="0.6"/>
+        </svg>
+    {% elif type_key == "introspection" %}
+        <svg viewBox="0 0 48 48" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 24 C10 12 18 8 24 8 C30 8 38 12 44 24 C38 36 30 40 24 40 C18 40 10 36 4 24 Z"/>
+            <circle cx="24" cy="24" r="7"/>
+            <circle cx="24" cy="24" r="1.6" fill="currentColor" stroke="none"/>
+        </svg>
+    {% endif %}
+</span>

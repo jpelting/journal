@@ -1,5 +1,5 @@
 {% extends "entries/base.html" %}
-{% block title %}Evening Follow-up - Journal{% endblock %}
+{% block title %}Evening Follow-up - The Wax Tablet{% endblock %}
 {% block content %}
     {% include "entries/_checkin_tabs.html" with active_tab="evening" %}
     <h1>Evening Follow-up</h1>
@@ -75,7 +75,7 @@
             {{ form.evening_gratitude_audit.errors }}
         </section>
 
-        <button class="btn" type="submit">Save evening follow-up</button>
+        <button class="btn" type="submit">Etch Evening Reflection</button>
     </form>
 
     <script>
@@ -85,5 +85,28 @@
                 output.textContent = slider.value;
             });
         });
+    </script>
+
+    <script>
+        (function () {
+            var form = document.querySelector('form');
+            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!form || reduceMotion) return;
+
+            var overlay = document.createElement('div');
+            overlay.className = 'wipe-slate-overlay';
+            overlay.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(overlay);
+
+            var wiping = false;
+            form.addEventListener('submit', function (e) {
+                if (wiping) return;
+                e.preventDefault();
+                wiping = true;
+                overlay.classList.add('active');
+                document.body.classList.add('wiping-slate');
+                setTimeout(function () { form.submit(); }, 650);
+            });
+        })();
     </script>
 {% endblock %}

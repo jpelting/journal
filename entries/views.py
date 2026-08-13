@@ -4,6 +4,8 @@ from io import BytesIO
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import login as auth_login
+from django.contrib.auth.decorators import login_not_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
@@ -19,6 +21,7 @@ from .forms import (
     GoalFormSet,
     MomentCheckInForm,
     MorningCheckInForm,
+    SignupForm,
 )
 from .models import DevotionalPrompt, Entry, IntrospectionPrompt, MomentCheckIn, Prayer, StoicPrompt
 from .weather import get_current_weather, weather_animation_for_summary
@@ -29,6 +32,19 @@ JOURNAL_TYPES = {
     "freeform": {"label": "Freeform Journal", "description": "Open-ended daily journal entries."},
     "introspection": {"label": "Introspection", "description": "A daily reflection question, one for each day of the year."},
 }
+
+
+@login_not_required
+def signup_view(request):
+    if request.method == "POST":
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            auth_login(request, user)
+            return redirect("entries:home")
+    else:
+        form = SignupForm()
+    return render(request, "entries/signup.html", {"form": form})
 
 
 def _next_stoic_prompt(user):
@@ -151,7 +167,8 @@ class EntryFormMixin:
         context = super().get_context_data(**kwargs)
         context["stoic_prompt_obj"] = _resolve_prompt(context["form"], "stoic_prompt", StoicPrompt)
         context["devotional_prompt_obj"] = _resolve_prompt(context["form"], "devotional_prompt", DevotionalPrompt)
-        context["introspection_prompt_obj"] = IntrospectionPrompt.for_date(_form_date(context["form"]))
+        context["form_date"] = _form_date(context["form"])
+        context["introspection_prompt_obj"] = IntrospectionPrompt.for_date(context["form_date"])
         context["bible_attribution"] = settings.BIBLE_VERSION_ATTRIBUTION
         context["form_journal_type"] = self._journal_type_param()
         context["active_section"] = context["form_journal_type"] or "stoic"

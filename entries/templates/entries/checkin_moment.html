@@ -1,5 +1,5 @@
 {% extends "entries/base.html" %}
-{% block title %}In the Moment - Journal{% endblock %}
+{% block title %}In the Moment - The Wax Tablet{% endblock %}
 {% block content %}
     {% include "entries/_checkin_tabs.html" with active_tab="moment" %}
     <h1>In the Moment</h1>
@@ -23,7 +23,7 @@
             {{ form.note }}
         </section>
 
-        <button class="btn" type="submit">Log this moment</button>
+        <button class="btn" type="submit">Etch This Moment</button>
     </form>
 
     {% if recent_moments %}

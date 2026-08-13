@@ -1,6 +1,8 @@
 from django import forms
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import UserCreationForm
 
-from .models import EMOTION_CHOICES, Entry, Goal
+from .models import EMOTION_CHOICES, Entry, Goal, Profile
 
 SLIDER_ATTRS = {"type": "range", "min": 1, "max": 10, "step": 1, "class": "slider"}
 SCORE_WIDGETS = {
@@ -13,6 +15,21 @@ SCORE_WIDGETS = {
     "evening_emotional_score": forms.NumberInput(attrs=SLIDER_ATTRS),
     "evening_spiritual_score": forms.NumberInput(attrs=SLIDER_ATTRS),
 }
+
+
+class ScoreSliderMinFixMixin:
+    """PositiveSmallIntegerField.formfield() defaults min_value to 0, which
+    clobbers the widget's min=1 attrs at field-construction time — so the
+    rendered slider lets you drag to 0 even though the model validators
+    (SCORE_VALIDATORS) require >=1, causing a silent whole-form validation
+    failure. Force min back to 1 on each bound field instance."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in SCORE_WIDGETS:
+            if name in self.fields:
+                self.fields[name].min_value = 1
+                self.fields[name].widget.attrs["min"] = 1
 
 
 class EntryForm(forms.ModelForm):
@@ -47,7 +64,7 @@ class EntryForm(forms.ModelForm):
         return cleaned_data
 
 
-class MorningCheckInForm(forms.ModelForm):
+class MorningCheckInForm(ScoreSliderMinFixMixin, forms.ModelForm):
     class Meta:
         model = Entry
         fields = [
@@ -73,7 +90,7 @@ class MorningCheckInForm(forms.ModelForm):
         }
 
 
-class EveningCheckInForm(forms.ModelForm):
+class EveningCheckInForm(ScoreSliderMinFixMixin, forms.ModelForm):
     class Meta:
         model = Entry
         fields = [
@@ -123,3 +140,34 @@ class MomentCheckInForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 4, "placeholder": "What are you feeling, and why?"}),
         required=False,
     )
+
+
+class SignupForm(UserCreationForm):
+    name = forms.CharField(max_length=150)
+    date_of_birth = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    gender = forms.ChoiceField(choices=Profile.GENDER_CHOICES)
+    gender_self_description = forms.CharField(max_length=100, required=False)
+    zipcode = forms.CharField(max_length=10)
+
+    class Meta(UserCreationForm.Meta):
+        model = get_user_model()
+        fields = ("username",)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("gender") == "self_describe" and not cleaned_data.get("gender_self_description"):
+            self.add_error("gender_self_description", "Please describe your gender.")
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=commit)
+        if commit:
+            Profile.objects.create(
+                user=user,
+                name=self.cleaned_data["name"],
+                date_of_birth=self.cleaned_data["date_of_birth"],
+                gender=self.cleaned_data["gender"],
+                gender_self_description=self.cleaned_data.get("gender_self_description", ""),
+                zipcode=self.cleaned_data["zipcode"],
+            )
+        return user

@@ -104,6 +104,7 @@ class Entry(models.Model):
 
     # Part 1: check-in
     weather_summary = models.CharField(max_length=200, blank=True, help_text="Cached weather snapshot from the morning check-in.")
+    forecast_summary = models.CharField(max_length=200, blank=True, help_text="Cached tomorrow's forecast from the evening check-in.")
 
     morning_mental_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
     morning_physical_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)

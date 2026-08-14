@@ -2,8 +2,18 @@
 {% block title %}Evening Follow-up - The Wax Tablet{% endblock %}
 {% block content %}
     {% include "entries/_checkin_tabs.html" with active_tab="evening" %}
-    <h1>Evening Follow-up</h1>
-    <p class="checkin-meta">{{ now|date:"l, F j" }} &middot; {{ now|date:"g:i A" }}</p>
+    <div class="checkin-header">
+        <h1>Evening Follow-up</h1>
+        <p class="checkin-meta">{{ now|date:"l, F j" }} &middot; {{ now|date:"g:i A" }}</p>
+        {% if entry.forecast_summary %}
+            {% if forecast_animation %}
+                <div class="weather-anim-wrap">
+                    {% include "entries/_weather_animation.html" with category=forecast_animation %}
+                </div>
+            {% endif %}
+            <p class="checkin-meta">Tomorrow: {{ entry.forecast_summary }} in {{ weather_location }}</p>
+        {% endif %}
+    </div>
 
     <form method="post" novalidate>
         {% csrf_token %}

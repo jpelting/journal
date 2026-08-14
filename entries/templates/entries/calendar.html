@@ -22,17 +22,19 @@
                     {% for day in week %}
                         {% if day %}
                             <td class="cal-day{% if day.is_today %} today{% endif %}{% if day.bg_color %} has-mood-bg{% endif %}"{% if day.bg_color %} style="background:{{ day.bg_color }};"{% endif %}>
-                                {% if day.entry %}
-                                    <a href="{{ day.entry.get_absolute_url }}" class="cal-day-link" data-entry-id="{{ day.entry.pk }}">{{ day.day }}</a>
-                                    <div class="cal-scores">
-                                        {% if day.entry.mental_score %}M{{ day.entry.mental_score }} {% endif %}
-                                        {% if day.entry.physical_score %}P{{ day.entry.physical_score }} {% endif %}
-                                        {% if day.entry.emotional_score %}E{{ day.entry.emotional_score }} {% endif %}
-                                        {% if day.entry.spiritual_score %}S{{ day.entry.spiritual_score }}{% endif %}
-                                    </div>
-                                {% else %}
-                                    <a class="cal-add" href="{% url 'entries:create' %}?date={{ day.date|date:'Y-m-d' }}">{{ day.day }}</a>
-                                {% endif %}
+                                <div class="cal-day-inner">
+                                    {% if day.entry %}
+                                        <a href="{{ day.entry.get_absolute_url }}" class="cal-day-link" data-entry-id="{{ day.entry.pk }}">{{ day.day }}</a>
+                                        <div class="cal-scores">
+                                            {% if day.entry.mental_score %}<span>M{{ day.entry.mental_score }}</span>{% endif %}
+                                            {% if day.entry.physical_score %}<span>P{{ day.entry.physical_score }}</span>{% endif %}
+                                            {% if day.entry.emotional_score %}<span>E{{ day.entry.emotional_score }}</span>{% endif %}
+                                            {% if day.entry.spiritual_score %}<span>S{{ day.entry.spiritual_score }}</span>{% endif %}
+                                        </div>
+                                    {% else %}
+                                        <a class="cal-add" href="{% url 'entries:create' %}?date={{ day.date|date:'Y-m-d' }}">{{ day.day }}</a>
+                                    {% endif %}
+                                </div>
                             </td>
                         {% else %}
                             <td class="cal-empty"></td>

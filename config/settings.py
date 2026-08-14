@@ -167,6 +167,22 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 
 
+# Email (used for the "forgot password" flow). Defaults to printing emails to
+# the console/server log when DEBUG, since there's no mail server locally;
+# set DJANGO_EMAIL_BACKEND plus the EMAIL_* vars below for a real SMTP relay
+# in production.
+EMAIL_BACKEND = os.environ.get(
+    'DJANGO_EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend',
+)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@thewaxtablet.local')
+
+
 # Weather (used by the morning check-in page)
 
 WEATHER_LOCATION_NAME = 'Mount Holly, NC'

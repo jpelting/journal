@@ -96,6 +96,36 @@ def get_current_weather():
         return None
 
 
+def get_tomorrow_forecast():
+    """Fetch a short "81°F / 64°F, Slight rain" style forecast for tomorrow, or None on failure.
+
+    Best-effort external call on a page-render path, same contract as
+    get_current_weather(): never raise, just return None so the evening
+    check-in still renders without a forecast.
+    """
+    params = urllib.parse.urlencode(
+        {
+            "latitude": settings.WEATHER_LATITUDE,
+            "longitude": settings.WEATHER_LONGITUDE,
+            "daily": "temperature_2m_max,temperature_2m_min,weather_code",
+            "temperature_unit": "fahrenheit",
+            "timezone": settings.WEATHER_TIMEZONE,
+            "forecast_days": 2,
+        }
+    )
+    url = f"https://api.open-meteo.com/v1/forecast?{params}"
+    try:
+        with urllib.request.urlopen(url, timeout=5) as response:
+            data = json.load(response)
+        daily = data["daily"]
+        high = round(daily["temperature_2m_max"][1])
+        low = round(daily["temperature_2m_min"][1])
+        description = WEATHER_CODES.get(daily["weather_code"][1], "Unknown conditions")
+        return f"{high}°F / {low}°F, {description}"
+    except Exception:
+        return None
+
+
 def weather_animation_for_summary(summary):
     """Map a cached "72°F, Partly cloudy" summary back to an animation category.
 

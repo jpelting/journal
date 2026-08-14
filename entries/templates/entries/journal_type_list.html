@@ -2,10 +2,13 @@
 {% block title %}{{ journal_label }} - The Wax Tablet{% endblock %}
 {% block content %}
     <p><a href="{% url 'entries:list' %}">&laquo; Back to Journals</a></p>
-    <h1>{{ journal_label }}</h1>
-    {% if new_entry_url %}
-        <p><a class="btn" href="{{ new_entry_url }}">+ New entry</a></p>
-    {% endif %}
+    <div class="journal-type-header">
+        {% include "entries/_journal_icon.html" with type_key=journal_type %}
+        <h1>{{ journal_label }}</h1>
+        {% if new_entry_url %}
+            <p><a class="btn" href="{{ new_entry_url }}">+ New entry</a></p>
+        {% endif %}
+    </div>
     {% if entries %}
         <ul class="entry-list">
             {% for entry in entries %}

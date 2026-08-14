@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign up - The Wax Tablet</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,7 +42,7 @@
         }
         label { display: block; margin-top: 0.9rem; font-weight: bold; }
         .helptext { font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0; }
-        input[type=text], input[type=password], input[type=date], select {
+        input[type=text], input[type=email], input[type=password], input[type=date], select {
             width: 100%;
             padding: 0.5rem 0.6rem;
             margin-top: 0.25rem;
@@ -113,6 +114,13 @@
                 <label for="{{ form.name.id_for_label }}">Name</label>
                 {{ form.name }}
                 {{ form.name.errors }}
+            </div>
+
+            <div class="field-row">
+                <label for="{{ form.email.id_for_label }}">Email</label>
+                {{ form.email }}
+                <p class="helptext">Used to send you a password reset link if you forget it.</p>
+                {{ form.email.errors }}
             </div>
 
             <div class="field-row">

@@ -1,0 +1,102 @@
+{% extends "entries/base.html" %}
+{% block title %}My Account - The Wax Tablet{% endblock %}
+{% block content %}
+    <div class="checkin-header">
+        <h1>My Account</h1>
+    </div>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <section class="part">
+            <h2>Login details</h2>
+            {{ user_form.non_field_errors }}
+            <label for="{{ user_form.username.id_for_label }}">Username</label>
+            {{ user_form.username }}
+            {{ user_form.username.errors }}
+
+            <label for="{{ user_form.email.id_for_label }}">Email</label>
+            {{ user_form.email }}
+            <p class="helptext">Used to send you a password reset link if you forget it.</p>
+            {{ user_form.email.errors }}
+        </section>
+
+        <section class="part">
+            <h2>Profile</h2>
+            {{ profile_form.non_field_errors }}
+            <label for="{{ profile_form.name.id_for_label }}">Name</label>
+            {{ profile_form.name }}
+            {{ profile_form.name.errors }}
+
+            <label for="{{ profile_form.date_of_birth.id_for_label }}">Date of birth</label>
+            {{ profile_form.date_of_birth }}
+            {{ profile_form.date_of_birth.errors }}
+
+            <label for="{{ profile_form.gender.id_for_label }}">Gender</label>
+            {{ profile_form.gender }}
+            {{ profile_form.gender.errors }}
+
+            <div id="gender-self-describe-row">
+                <label for="{{ profile_form.gender_self_description.id_for_label }}">Please describe</label>
+                {{ profile_form.gender_self_description }}
+                {{ profile_form.gender_self_description.errors }}
+            </div>
+
+            <label for="{{ profile_form.zipcode.id_for_label }}">Zip code</label>
+            {{ profile_form.zipcode }}
+            {{ profile_form.zipcode.errors }}
+        </section>
+
+        <p class="form-actions"><button class="btn" type="submit">Save changes</button></p>
+    </form>
+
+    <section class="part danger-zone">
+        <h2>Danger Zone</h2>
+        <p class="helptext">Permanently delete your account and everything in it &mdash; every journal entry, check-in, and moment logged.</p>
+        <p class="form-actions"><button type="button" class="btn btn-danger" id="delete-account-button">Delete my account</button></p>
+    </section>
+
+    <div class="modal-backdrop" id="delete-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="delete-modal-close" aria-label="Close">&times;</button>
+            <h2>Are you certain?</h2>
+            <p>This will permanently delete your account, your profile, and every entry you've ever written &mdash; check-ins, Stoic reflections, devotionals, freeform journals, introspections, all of it.</p>
+            <p>Once you confirm, your words are ferried across the river Styx. There is no Charon to row you back &mdash; this cannot be undone, and none of it will ever be read again.</p>
+            <form method="post" action="{% url 'entries:account-delete' %}">
+                {% csrf_token %}
+                <p class="form-actions">
+                    <button type="button" class="btn" id="delete-modal-cancel">Keep my account</button>
+                    <button type="submit" class="btn btn-danger">Yes, delete everything</button>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        var genderSelect = document.getElementById('{{ profile_form.gender.id_for_label }}');
+        var selfDescribeRow = document.getElementById('gender-self-describe-row');
+
+        function syncSelfDescribeVisibility() {
+            selfDescribeRow.style.display = genderSelect.value === 'self_describe' ? 'block' : 'none';
+        }
+        genderSelect.addEventListener('change', syncSelfDescribeVisibility);
+        syncSelfDescribeVisibility();
+
+        (function () {
+            var backdrop = document.getElementById('delete-modal-backdrop');
+
+            function openModal() { backdrop.hidden = false; }
+            function closeModal() { backdrop.hidden = true; }
+
+            document.getElementById('delete-account-button').addEventListener('click', openModal);
+            document.getElementById('delete-modal-close').addEventListener('click', closeModal);
+            document.getElementById('delete-modal-cancel').addEventListener('click', closeModal);
+            backdrop.addEventListener('click', function (event) {
+                if (event.target === backdrop) closeModal();
+            });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !backdrop.hidden) closeModal();
+            });
+        })();
+    </script>
+{% endblock %}

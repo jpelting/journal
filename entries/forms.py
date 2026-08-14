@@ -144,6 +144,7 @@ class MomentCheckInForm(forms.Form):
 
 class SignupForm(UserCreationForm):
     name = forms.CharField(max_length=150)
+    email = forms.EmailField()
     date_of_birth = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     gender = forms.ChoiceField(choices=Profile.GENDER_CHOICES)
     gender_self_description = forms.CharField(max_length=100, required=False)
@@ -151,7 +152,13 @@ class SignupForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = get_user_model()
-        fields = ("username",)
+        fields = ("username", "email")
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if get_user_model().objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this email already exists.")
+        return email
 
     def clean(self):
         cleaned_data = super().clean()
@@ -171,3 +178,28 @@ class SignupForm(UserCreationForm):
                 zipcode=self.cleaned_data["zipcode"],
             )
         return user
+
+
+class AccountUserForm(forms.ModelForm):
+    class Meta:
+        model = get_user_model()
+        fields = ("username", "email")
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if get_user_model().objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("An account with this email already exists.")
+        return email
+
+
+class AccountProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ("name", "date_of_birth", "gender", "gender_self_description", "zipcode")
+        widgets = {"date_of_birth": forms.DateInput(attrs={"type": "date"})}
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("gender") == "self_describe" and not cleaned_data.get("gender_self_description"):
+            self.add_error("gender_self_description", "Please describe your gender.")
+        return cleaned_data

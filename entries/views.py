@@ -5,6 +5,7 @@ from io import BytesIO
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
+from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_not_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
@@ -15,6 +16,8 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 from xhtml2pdf import pisa
 
 from .forms import (
+    AccountProfileForm,
+    AccountUserForm,
     EntryForm,
     EveningCheckInForm,
     GoalCompletionFormSet,
@@ -23,8 +26,8 @@ from .forms import (
     MorningCheckInForm,
     SignupForm,
 )
-from .models import DevotionalPrompt, Entry, IntrospectionPrompt, MomentCheckIn, Prayer, StoicPrompt
-from .weather import get_current_weather, weather_animation_for_summary
+from .models import DevotionalPrompt, Entry, IntrospectionPrompt, MomentCheckIn, Prayer, Profile, StoicPrompt
+from .weather import get_current_weather, get_tomorrow_forecast, weather_animation_for_summary
 
 JOURNAL_TYPES = {
     "stoic": {"label": "Stoic Reflections", "description": "Guided reflections on Stoic quotes and prompts."},
@@ -45,6 +48,32 @@ def signup_view(request):
     else:
         form = SignupForm()
     return render(request, "entries/signup.html", {"form": form})
+
+
+def account_view(request):
+    profile = getattr(request.user, "profile", None) or Profile(user=request.user)
+    if request.method == "POST":
+        user_form = AccountUserForm(request.POST, instance=request.user)
+        profile_form = AccountProfileForm(request.POST, instance=profile)
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, "Your account has been updated.")
+            return redirect("entries:account")
+    else:
+        user_form = AccountUserForm(instance=request.user)
+        profile_form = AccountProfileForm(instance=profile)
+    return render(request, "entries/account.html", {"user_form": user_form, "profile_form": profile_form})
+
+
+def account_delete_view(request):
+    if request.method == "POST":
+        user = request.user
+        auth_logout(request)
+        user.delete()
+        messages.success(request, "Your account and all its data have been deleted.")
+        return redirect("login")
+    return redirect("entries:account")
 
 
 def _next_stoic_prompt(user):
@@ -319,6 +348,11 @@ def checkin_morning_view(request):
 
 def checkin_evening_view(request):
     entry = _today_entry(request.user)
+    if not entry.forecast_summary:
+        summary = get_tomorrow_forecast()
+        if summary:
+            entry.forecast_summary = summary
+            entry.save(update_fields=["forecast_summary"])
 
     if request.method == "POST":
         form = EveningCheckInForm(request.POST, instance=entry)
@@ -344,6 +378,8 @@ def checkin_evening_view(request):
             "goal_formset": goal_formset,
             "percent_complete": percent_complete,
             "now": timezone.localtime(),
+            "weather_location": settings.WEATHER_LOCATION_NAME,
+            "forecast_animation": weather_animation_for_summary(entry.forecast_summary),
             "today_prayer": Prayer.for_date(timezone.localdate()),
         },
     )

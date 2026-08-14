@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}The Wax Tablet{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -54,6 +55,7 @@
             box-shadow: var(--engrave-shadow), 0 1px 3px var(--shadow);
         }
         section.part h2 { margin-top: 0; font-size: 1.1rem; color: var(--accent); }
+        section.part h2.entry-section-title { font-size: 1.65rem; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
         section.part h3 { font-size: 0.95rem; color: var(--accent); margin-bottom: 0.25rem; }
         label { display: block; margin-top: 0.75rem; font-weight: bold; }
         input[type=text], input[type=date], input[type=number], textarea, select {
@@ -113,7 +115,10 @@
         .journals-title { text-align: center; }
         .journal-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1.5rem; }
         .journal-tile {
-            display: block;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 1.25rem 1.5rem;
@@ -124,6 +129,7 @@
             transition: border-color 0.15s ease, transform 0.15s ease;
         }
         .journal-tile:hover { border-color: var(--accent); transform: translateY(-1px); }
+        .journal-tile .type-medallion { width: 4.25rem; height: 4.9rem; margin-bottom: 0.85rem; }
         .journal-tile h2 { margin: 0 0 0.35rem; font-size: 1.05rem; color: var(--accent); }
         .journal-tile p { margin: 0; }
         @media (max-width: 600px) { .journal-tiles { grid-template-columns: 1fr; } }
@@ -148,6 +154,10 @@
             transition: background 0.15s ease, box-shadow 0.15s ease;
         }
         .btn:hover { background: var(--accent-hover); box-shadow: 0 0 22px 3px rgba(198, 139, 69, 0.5); }
+        .btn-danger { background: var(--danger-bg); color: var(--danger-text); border: 1px solid var(--danger-border); box-shadow: none; }
+        .btn-danger:hover { background: #4a2626; box-shadow: 0 0 16px 1px rgba(226, 163, 163, 0.25); }
+        .danger-zone { border-color: var(--danger-border); }
+        .danger-zone h2 { color: var(--danger-text); }
         .link-btn {
             background: none;
             border: none;
@@ -165,19 +175,28 @@
         table.calendar { width: 100%; min-width: 560px; border-collapse: collapse; table-layout: fixed; box-shadow: var(--engrave-shadow); }
         table.calendar th { padding: 0.6rem 0; font-size: 0.95rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
         table.calendar td { border: 1px solid var(--border-subtle); height: 8rem; vertical-align: top; padding: 0.5rem; }
+        table.calendar .cal-day-inner { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.35rem; }
         table.calendar td.cal-empty { background: var(--bg-subtle); border-color: var(--bg-subtle); }
         table.calendar td.today { outline: 3px solid var(--accent); outline-offset: -3px; }
         table.calendar td a { text-decoration: none; font-weight: bold; color: var(--text); font-size: 1.15rem; }
         table.calendar td .cal-add { color: var(--text-muted); font-weight: normal; }
-        table.calendar .cal-scores { font-size: 0.85rem; color: var(--accent); margin-top: 0.4rem; line-height: 1.4; }
+        table.calendar .cal-scores { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; font-size: 0.85rem; color: var(--accent); line-height: 1.4; }
         /* Mood-color cells always get a pale swatch background regardless of site theme,
            so their text needs a fixed dark color rather than the theme-aware default above. */
         table.calendar td.has-mood-bg a { color: #2b2b28; }
         table.calendar td.has-mood-bg .cal-scores { color: #47372a; }
         @media (max-width: 600px) {
-            table.calendar td { height: 5.5rem; padding: 0.35rem; }
-            table.calendar td a { font-size: 1rem; }
-            table.calendar .cal-scores { font-size: 0.75rem; }
+            .calendar-scroll { overflow-x: visible; }
+            table.calendar { min-width: 0; }
+            table.calendar th { padding: 0.4rem 0.1rem; font-size: 0.75rem; }
+            table.calendar td { height: 4.25rem; padding: 0.25rem 0.15rem; }
+            table.calendar td a { font-size: 0.95rem; }
+            table.calendar .cal-scores { font-size: 0.62rem; line-height: 1.25; }
+        }
+        @media (max-width: 380px) {
+            table.calendar td { height: 3.6rem; }
+            table.calendar td a { font-size: 0.85rem; }
+            table.calendar .cal-scores { display: none; }
         }
         .calendar-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); }
         .calendar-legend .legend-note { font-style: italic; }
@@ -219,6 +238,10 @@
         .tab-section { display: none; }
         .tab-section.active { display: block; }
         .checkin-header { text-align: center; margin-bottom: 1.5rem; }
+        .journal-type-header { text-align: center; margin-bottom: 1.5rem; }
+        .checkin-link-note { text-align: center; }
+        .form-actions { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }
+        .journal-type-header .type-medallion { width: 6.375rem; height: 7.35rem; }
         .checkin-meta { color: var(--text-muted); font-size: 0.9rem; margin-top: -0.5rem; }
 
         .weather-anim-wrap { margin: 0.5rem 0; }
@@ -340,7 +363,6 @@
         }
         @media (max-width: 600px) {
             nav { gap: 0.4rem 0.9rem; }
-            table.calendar td { min-width: 4.5rem; }
         }
         .site-header { text-align: center; margin-top: 0.5rem; margin-bottom: 1.5rem; }
         .brand-mark {
@@ -377,25 +399,25 @@
             .site-header .wt-seal { width: 2.1rem; height: 2.1rem; font-size: 0.85rem; }
         }
         .type-medallion {
+            position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 2.75rem;
-            height: 2.75rem;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 30%, #4a3a24 0%, #241a0f 75%);
-            border: 1px solid var(--border);
-            box-shadow: var(--engrave-shadow), 0 1px 3px var(--shadow);
+            width: 2.5rem;
+            height: 2.9rem;
             color: var(--accent);
             margin-bottom: 0.6rem;
+            filter: drop-shadow(0 2px 2px var(--shadow));
         }
+        .type-medallion .shield-bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .type-medallion .shield-icon { position: relative; z-index: 1; width: 46%; height: 46%; }
         .checkin-tabs a .type-medallion, .entry-tabs a .type-medallion {
-            width: 1.4rem;
-            height: 1.4rem;
+            width: 1.25rem;
+            height: 1.45rem;
             margin: 0 0.4rem 0 0;
             vertical-align: middle;
         }
-        .checkin-tabs a .type-medallion svg, .entry-tabs a .type-medallion svg { width: 16px; height: 16px; }
+        .checkin-tabs a .type-medallion .shield-icon, .entry-tabs a .type-medallion .shield-icon { width: 52%; height: 52%; }
         .wipe-slate-overlay {
             position: fixed;
             inset: 0;
@@ -442,7 +464,7 @@
         <a href="{% url 'entries:calendar' %}">Calendar</a>
         <a href="{% url 'entries:export' %}">Export</a>
         <a href="/admin/">Admin</a>
-        <span class="nav-user">{{ user.username }}</span>
+        <a href="{% url 'entries:account' %}" class="nav-user">{{ user.username }}</a>
         <form action="{% url 'logout' %}" method="post" class="logout-form">
             {% csrf_token %}
             <button type="submit">Log out</button>

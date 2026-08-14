@@ -10,27 +10,30 @@
         </nav>
     {% endif %}
 
-    <h1>{% if form.instance.pk %}Edit entry — {{ form.instance.date }}{% else %}New journal entry{% endif %}</h1>
+    <div class="checkin-header">
+        <h1>{% if form.instance.pk %}Edit entry — {{ form.instance.date }}{% else %}New journal entry{% endif %}</h1>
+
+        <p class="date-display" id="date-display"{% if form.date.errors %} hidden{% endif %}>
+            {{ form_date|date:"l, F j, Y" }}
+            <button type="button" class="link-btn" id="date-edit-toggle">Edit date</button>
+        </p>
+    </div>
 
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form.non_field_errors }}
         {% if form_journal_type %}<input type="hidden" name="type" value="{{ form_journal_type }}">{% endif %}
 
-        <p class="date-display" id="date-display"{% if form.date.errors %} hidden{% endif %}>
-            {{ form_date|date:"l, F j, Y" }}
-            <button type="button" class="link-btn" id="date-edit-toggle">Edit date</button>
-        </p>
         <div id="date-edit-wrap"{% if not form.date.errors %} hidden{% endif %}>
             <label for="{{ form.date.id_for_label }}">Date</label>
             {{ form.date }}
             {{ form.date.errors }}
         </div>
 
-        <p class="helptext">Daily check-in (scores, goals, weather) now lives on the <a href="{% url 'entries:checkin' %}">Check-in</a> page.</p>
+        <p class="helptext checkin-link-note">Daily check-in (scores, goals, weather) now lives on the <a href="{% url 'entries:checkin' %}">Check-in</a> page.</p>
 
         <section class="part tab-section{% if active_section == "stoic" %} active{% endif %}" id="tab-stoic">
-            <h2>Stoic guided journal</h2>
+            <h2 class="entry-section-title">Stoic guided journal</h2>
             {% if stoic_prompt_obj %}
                 <p class="prompt">
                     {{ stoic_prompt_obj.text }}
@@ -45,7 +48,7 @@
         </section>
 
         <section class="part tab-section{% if active_section == "devotional" %} active{% endif %}" id="tab-devotional">
-            <h2>Biblical devotional</h2>
+            <h2 class="entry-section-title">Biblical devotional</h2>
             {% if devotional_prompt_obj %}
                 <p class="prompt">
                     {{ devotional_prompt_obj.reference }}
@@ -61,13 +64,13 @@
         </section>
 
         <section class="part tab-section{% if active_section == "freeform" %} active{% endif %}" id="tab-freeform">
-            <h2>Freeform journal</h2>
+            <h2 class="entry-section-title">Freeform journal</h2>
             <label for="{{ form.freeform_entry.id_for_label }}">Mental / emotional dump</label>
             {{ form.freeform_entry }}
         </section>
 
         <section class="part tab-section{% if active_section == "introspection" %} active{% endif %}" id="tab-introspection">
-            <h2>Introspection</h2>
+            <h2 class="entry-section-title">Introspection</h2>
             {% if introspection_prompt_obj %}
                 <p class="prompt">{{ introspection_prompt_obj.question }}</p>
             {% endif %}
@@ -75,11 +78,11 @@
             {{ form.introspection_response }}
         </section>
 
-        <button class="btn" type="submit">Etch Entry</button>
+        <p class="form-actions"><button class="btn" type="submit">Etch Entry</button></p>
     </form>
 
     {% if form_journal_type %}
-        <p><a class="btn" href="{% url 'entries:journal-type' journal_type=form_journal_type %}">View previous entries</a></p>
+        <p class="form-actions"><a class="btn" href="{% url 'entries:journal-type' journal_type=form_journal_type %}">View previous entries</a></p>
     {% endif %}
 
     <script>

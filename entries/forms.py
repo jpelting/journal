@@ -17,6 +17,30 @@ SCORE_WIDGETS = {
 }
 
 
+class ScopedEntrySaveMixin:
+    """Restricts save() to this form's own fields when updating an existing Entry.
+
+    A single Entry row is edited by three independently-submitted forms (morning
+    check-in, evening check-in, and the guided-journal EntryForm) that can each be
+    open in a different browser tab or device at once. Plain ModelForm.save()
+    writes every field on the in-memory instance, so a stale copy loaded before
+    another tab's save would silently clobber that tab's changes. update_fields
+    scopes the UPDATE to just the columns this form actually owns.
+    """
+
+    def save(self, commit=True):
+        entry = super().save(commit=False)
+        if commit:
+            if entry.pk:
+                # auto_now fields aren't implicitly included by Django when
+                # update_fields is passed, so updated_at needs to be listed
+                # explicitly or it would silently stop tracking real edits.
+                entry.save(update_fields=[*self.cleaned_data.keys(), "updated_at"])
+            else:
+                entry.save()
+        return entry
+
+
 class ScoreSliderMinFixMixin:
     """PositiveSmallIntegerField.formfield() defaults min_value to 0, which
     clobbers the widget's min=1 attrs at field-construction time — so the
@@ -32,7 +56,7 @@ class ScoreSliderMinFixMixin:
                 self.fields[name].widget.attrs["min"] = 1
 
 
-class EntryForm(forms.ModelForm):
+class EntryForm(ScopedEntrySaveMixin, forms.ModelForm):
     class Meta:
         model = Entry
         fields = [
@@ -64,7 +88,7 @@ class EntryForm(forms.ModelForm):
         return cleaned_data
 
 
-class MorningCheckInForm(ScoreSliderMinFixMixin, forms.ModelForm):
+class MorningCheckInForm(ScopedEntrySaveMixin, ScoreSliderMinFixMixin, forms.ModelForm):
     class Meta:
         model = Entry
         fields = [
@@ -90,7 +114,7 @@ class MorningCheckInForm(ScoreSliderMinFixMixin, forms.ModelForm):
         }
 
 
-class EveningCheckInForm(ScoreSliderMinFixMixin, forms.ModelForm):
+class EveningCheckInForm(ScopedEntrySaveMixin, ScoreSliderMinFixMixin, forms.ModelForm):
     class Meta:
         model = Entry
         fields = [

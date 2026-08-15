@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Access request - The Wax Tablet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark;
+            {% include "entries/_theme_vars.html" %}
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1.5rem;
+        }
+        .card {
+            background: var(--wax-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem 2.25rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: var(--engrave-shadow), 0 4px 20px var(--shadow);
+        }
+        h1 {
+            font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+            font-size: 1.2rem;
+            margin: 0 0 0.75rem;
+            color: var(--accent);
+        }
+        p { color: var(--text); font-size: 0.95rem; line-height: 1.5; }
+        .muted { color: var(--text-muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        {% if action == "approved" %}
+            <h1>Access granted</h1>
+            <p>{{ access_request.username }} ({{ access_request.email }}) can now log in.</p>
+        {% elif action == "rejected" %}
+            <h1>Access declined</h1>
+            <p>The request from {{ access_request.username }} ({{ access_request.email }}) has been declined.</p>
+        {% endif %}
+        <p class="muted">
+            Status: {{ access_request.get_status_display }}{% if access_request.decided_at %} on {{ access_request.decided_at|date:"N j, Y g:i A" }}{% endif %}.
+        </p>
+    </div>
+</body>
+</html>

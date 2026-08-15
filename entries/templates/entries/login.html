@@ -36,11 +36,18 @@
         h1 {
             font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
             font-size: 1.3rem;
-            margin: 0 0 1.5rem;
+            margin: 0 0 0.35rem;
             color: var(--accent);
             text-align: center;
             text-transform: uppercase;
             letter-spacing: 0.12em;
+        }
+        .subtitle {
+            margin: 0 0 1.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            letter-spacing: 0.03em;
         }
         label { display: block; margin-top: 0.75rem; font-weight: bold; }
         input[type=text], input[type=password] {
@@ -82,6 +89,7 @@
 <body>
     <div class="login-card">
         <h1>The Wax Tablet</h1>
+        <p class="subtitle">Leave your mark for today</p>
         <form method="post">
             {% csrf_token %}
             {{ form.non_field_errors }}
@@ -98,8 +106,11 @@
             <a href="{% url 'password_reset' %}">Forgot your password?</a>
         </p>
         <p style="text-align: center; margin-top: 0.5rem; font-size: 0.9rem;">
-            <a href="{% url 'signup' %}">New here? Create an account</a>
+            <a href="{% url 'request-access' %}">New here? Request access</a>
         </p>
     </div>
+    <script>
+        document.getElementById('{{ form.username.id_for_label }}').focus();
+    </script>
 </body>
 </html>

@@ -1,0 +1,13 @@
+{% autoescape off %}Someone has requested access to The Wax Tablet.
+
+Name: {{ access_request.name }}
+Username: {{ access_request.username }}
+Email: {{ access_request.email }}
+Date of birth: {{ access_request.date_of_birth }}
+Zip code: {{ access_request.zipcode }}
+
+Approve: {{ approve_url }}
+Reject: {{ reject_url }}
+
+Each link is one-click and only works once.
+{% endautoescape %}

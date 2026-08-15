@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import EMOTION_CHOICES, Entry, Goal, Profile
+from .models import EMOTION_CHOICES, AccessRequest, Entry, Goal, Profile
 
 SLIDER_ATTRS = {"type": "range", "min": 1, "max": 10, "step": 1, "class": "slider"}
 SCORE_WIDGETS = {
@@ -142,7 +142,7 @@ class MomentCheckInForm(forms.Form):
     )
 
 
-class SignupForm(UserCreationForm):
+class AccessRequestForm(UserCreationForm):
     name = forms.CharField(max_length=150)
     email = forms.EmailField()
     date_of_birth = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
@@ -154,10 +154,18 @@ class SignupForm(UserCreationForm):
         model = get_user_model()
         fields = ("username", "email")
 
+    def clean_username(self):
+        username = self.cleaned_data["username"]
+        if AccessRequest.objects.filter(username__iexact=username, status="pending").exists():
+            raise forms.ValidationError("There's already a pending request for this username.")
+        return username
+
     def clean_email(self):
         email = self.cleaned_data["email"]
         if get_user_model().objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("An account with this email already exists.")
+        if AccessRequest.objects.filter(email__iexact=email, status="pending").exists():
+            raise forms.ValidationError("There's already a pending request for this email.")
         return email
 
     def clean(self):
@@ -167,17 +175,23 @@ class SignupForm(UserCreationForm):
         return cleaned_data
 
     def save(self, commit=True):
-        user = super().save(commit=commit)
+        # UserCreationForm hashes the password onto self.instance via set_password()
+        # in its own save(); build that (unsaved) User to reuse the hashing, then copy
+        # the hash into AccessRequest instead of ever persisting the User itself.
+        user = super().save(commit=False)
+        access_request = AccessRequest(
+            username=self.cleaned_data["username"],
+            password_hash=user.password,
+            name=self.cleaned_data["name"],
+            email=self.cleaned_data["email"],
+            date_of_birth=self.cleaned_data["date_of_birth"],
+            gender=self.cleaned_data["gender"],
+            gender_self_description=self.cleaned_data.get("gender_self_description", ""),
+            zipcode=self.cleaned_data["zipcode"],
+        )
         if commit:
-            Profile.objects.create(
-                user=user,
-                name=self.cleaned_data["name"],
-                date_of_birth=self.cleaned_data["date_of_birth"],
-                gender=self.cleaned_data["gender"],
-                gender_self_description=self.cleaned_data.get("gender_self_description", ""),
-                zipcode=self.cleaned_data["zipcode"],
-            )
-        return user
+            access_request.save()
+        return access_request
 
 
 class AccountUserForm(forms.ModelForm):

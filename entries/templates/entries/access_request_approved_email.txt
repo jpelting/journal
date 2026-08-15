@@ -1,0 +1,6 @@
+{% autoescape off %}Good news — your request to join The Wax Tablet has been approved.
+
+You can log in now with the username and password you chose when you requested access:
+
+{{ login_url }}
+{% endautoescape %}

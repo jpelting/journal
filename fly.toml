@@ -1,0 +1,28 @@
+app = 'thewaxtablet'
+primary_region = 'iad'
+
+[build]
+
+[env]
+  DJANGO_DEBUG = 'False'
+  DJANGO_ALLOWED_HOSTS = 'thewaxtablet.fly.dev,www.thewaxtablet.com,thewaxtablet.com'
+  DJANGO_CSRF_TRUSTED_ORIGINS = 'https://thewaxtablet.fly.dev,https://www.thewaxtablet.com,https://thewaxtablet.com'
+  EMAIL_HOST = 'smtp.resend.com'
+  EMAIL_PORT = '587'
+  DEFAULT_FROM_EMAIL = 'The Wax Tablet <noreply@thewaxtablet.com>'
+
+[deploy]
+  release_command = 'python manage.py migrate'
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1

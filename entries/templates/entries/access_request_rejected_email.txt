@@ -1,0 +1,4 @@
+{% autoescape off %}Your request to join The Wax Tablet was not approved.
+
+If you think this is a mistake, reply to this email.
+{% endautoescape %}

@@ -4,11 +4,13 @@ from io import BytesIO
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_not_required
+from django.core.mail import send_mail
 from django.http import Http404, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -16,6 +18,7 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 from xhtml2pdf import pisa
 
 from .forms import (
+    AccessRequestForm,
     AccountProfileForm,
     AccountUserForm,
     EntryForm,
@@ -24,9 +27,8 @@ from .forms import (
     GoalFormSet,
     MomentCheckInForm,
     MorningCheckInForm,
-    SignupForm,
 )
-from .models import DevotionalPrompt, Entry, IntrospectionPrompt, MomentCheckIn, Prayer, Profile, StoicPrompt
+from .models import AccessRequest, DevotionalPrompt, Entry, IntrospectionPrompt, MomentCheckIn, Prayer, Profile, StoicPrompt
 from .weather import get_current_weather, get_tomorrow_forecast, weather_animation_for_summary
 
 JOURNAL_TYPES = {
@@ -38,16 +40,78 @@ JOURNAL_TYPES = {
 
 
 @login_not_required
-def signup_view(request):
+def request_access_view(request):
     if request.method == "POST":
-        form = SignupForm(request.POST)
+        form = AccessRequestForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            auth_login(request, user)
-            return redirect("entries:home")
+            access_request = form.save()
+            _notify_admin_of_access_request(request, access_request)
+            return render(request, "entries/request_access_sent.html")
     else:
-        form = SignupForm()
-    return render(request, "entries/signup.html", {"form": form})
+        form = AccessRequestForm()
+    return render(request, "entries/request_access.html", {"form": form})
+
+
+def _notify_admin_of_access_request(request, access_request):
+    context = {
+        "access_request": access_request,
+        "approve_url": request.build_absolute_uri(
+            reverse("access-request-approve", kwargs={"token": access_request.token})
+        ),
+        "reject_url": request.build_absolute_uri(
+            reverse("access-request-reject", kwargs={"token": access_request.token})
+        ),
+    }
+    subject = render_to_string("entries/access_request_admin_subject.txt", context).strip()
+    body = render_to_string("entries/access_request_admin_email.txt", context)
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [settings.ADMIN_EMAIL])
+
+
+@login_not_required
+def access_request_approve_view(request, token):
+    access_request = get_object_or_404(AccessRequest, token=token)
+    if access_request.status == "pending":
+        User = get_user_model()
+        user = User.objects.create(
+            username=access_request.username,
+            email=access_request.email,
+            password=access_request.password_hash,
+            is_active=True,
+        )
+        Profile.objects.create(
+            user=user,
+            name=access_request.name,
+            date_of_birth=access_request.date_of_birth,
+            gender=access_request.gender,
+            gender_self_description=access_request.gender_self_description,
+            zipcode=access_request.zipcode,
+        )
+        access_request.status = "approved"
+        access_request.decided_at = timezone.now()
+        access_request.save()
+
+        context = {"access_request": access_request, "login_url": request.build_absolute_uri(reverse("login"))}
+        subject = render_to_string("entries/access_request_approved_subject.txt", context).strip()
+        body = render_to_string("entries/access_request_approved_email.txt", context)
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [access_request.email])
+
+    return render(request, "entries/access_request_outcome.html", {"access_request": access_request, "action": "approved"})
+
+
+@login_not_required
+def access_request_reject_view(request, token):
+    access_request = get_object_or_404(AccessRequest, token=token)
+    if access_request.status == "pending":
+        access_request.status = "rejected"
+        access_request.decided_at = timezone.now()
+        access_request.save()
+
+        context = {"access_request": access_request}
+        subject = render_to_string("entries/access_request_rejected_subject.txt", context).strip()
+        body = render_to_string("entries/access_request_rejected_email.txt", context)
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [access_request.email])
+
+    return render(request, "entries/access_request_outcome.html", {"access_request": access_request, "action": "rejected"})
 
 
 def account_view(request):

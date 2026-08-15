@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .bible import get_passage_text
 from .models import (
+    AccessRequest,
     DevotionalPrompt,
     Entry,
     Goal,
@@ -148,4 +149,12 @@ class MomentCheckInAdmin(admin.ModelAdmin):
     list_display = ["created_at", "user", "emotions", "entry"]
     list_filter = ["user"]
     date_hierarchy = "created_at"
+    ordering = ["-created_at"]
+
+
+@admin.register(AccessRequest)
+class AccessRequestAdmin(admin.ModelAdmin):
+    list_display = ["username", "email", "status", "created_at", "decided_at"]
+    list_filter = ["status"]
+    readonly_fields = ["password_hash", "token", "created_at"]
     ordering = ["-created_at"]

@@ -25,7 +25,17 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', auth_views.LoginView.as_view(template_name='entries/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-    path('signup/', entries_views.signup_view, name='signup'),
+    path('request-access/', entries_views.request_access_view, name='request-access'),
+    path(
+        'request-access/<uuid:token>/approve/',
+        entries_views.access_request_approve_view,
+        name='access-request-approve',
+    ),
+    path(
+        'request-access/<uuid:token>/reject/',
+        entries_views.access_request_reject_view,
+        name='access-request-reject',
+    ),
     path(
         'password-reset/',
         auth_views.PasswordResetView.as_view(

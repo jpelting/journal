@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -245,6 +247,41 @@ class Profile(models.Model):
         today = timezone.localdate()
         dob = self.date_of_birth
         return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+
+class AccessRequest(models.Model):
+    """A pending request to create an account, awaiting admin approval by email link.
+
+    Holds the same data `SignupForm`/`Profile` would need, plus an already-hashed
+    password (never plaintext) captured at request time. On approval, a real `User`
+    + `Profile` is created from these fields; on rejection, the row is just marked
+    decided and no account is ever created.
+    """
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    username = models.CharField(max_length=150)
+    password_hash = models.CharField(max_length=255)
+    name = models.CharField(max_length=150)
+    email = models.EmailField()
+    date_of_birth = models.DateField()
+    gender = models.CharField(max_length=20, choices=Profile.GENDER_CHOICES)
+    gender_self_description = models.CharField(max_length=100, blank=True)
+    zipcode = models.CharField(max_length=10)
+    created_at = models.DateTimeField(default=timezone.now)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.username} ({self.get_status_display()})"
 
 
 class MomentCheckIn(models.Model):

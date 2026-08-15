@@ -6,4 +6,4 @@ db.sqlite3
 server.pid
 server.log
 staticfiles/
-PRODUCTION_SECRETS_DO_NOT_COMMIT.txt
+.git/

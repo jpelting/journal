@@ -156,15 +156,18 @@ STORAGES = {
 
 
 # Production hardening — inert locally since DEBUG=True by default there.
-# SECURE_PROXY_SSL_HEADER is intentionally not set here: it depends on the
-# eventual host's TLS-termination setup (e.g. most PaaS hosts forward
-# X-Forwarded-Proto) and must be configured once that host is chosen.
+# Fly.io terminates TLS at its edge proxy and forwards plain HTTP to the app,
+# setting X-Forwarded-Proto so Django can tell the request was originally HTTPS.
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_HSTS_SECONDS = 60
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    CSRF_TRUSTED_ORIGINS = [
+        origin for origin in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin
+    ]
 
 
 # Email (used for the "forgot password" flow). Defaults to printing emails to
@@ -181,6 +184,9 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@thewaxtablet.local')
+
+# Where "request access" notifications are sent for the admin to approve/reject.
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'jpelting@gmail.com')
 
 
 # Weather (used by the morning check-in page)

@@ -19,6 +19,7 @@ urlpatterns = [
     path("checkin/moment/", views.checkin_moment_view, name="checkin-moment"),
     path("account/", views.account_view, name="account"),
     path("account/delete/", views.account_delete_view, name="account-delete"),
+    path("feedback/", views.feedback_view, name="feedback"),
     path("<int:pk>/", views.EntryDetailView.as_view(), name="detail"),
     path("<int:pk>/edit/", views.EntryUpdateView.as_view(), name="edit"),
 ]

@@ -1,0 +1,26 @@
+{% extends "entries/base.html" %}
+{% block title %}Feedback - The Wax Tablet{% endblock %}
+{% block content %}
+    <div class="checkin-header">
+        <h1>Feedback</h1>
+    </div>
+
+    <section class="part">
+        <p class="helptext">Found a bug, or want to see something changed? Send a note straight to the admin.</p>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <label for="{{ form.category.id_for_label }}">Category</label>
+            {{ form.category }}
+            {{ form.category.errors }}
+
+            <label for="{{ form.message.id_for_label }}">Message</label>
+            {{ form.message }}
+            {{ form.message.errors }}
+
+            <p class="form-actions"><button class="btn" type="submit">Send feedback</button></p>
+        </form>
+    </section>
+{% endblock %}

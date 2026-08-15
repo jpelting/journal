@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import EMOTION_CHOICES, AccessRequest, Entry, Goal, Profile
+from .models import EMOTION_CHOICES, AccessRequest, Entry, Feedback, Goal, Profile
 
 SLIDER_ATTRS = {"type": "range", "min": 1, "max": 10, "step": 1, "class": "slider"}
 SCORE_WIDGETS = {
@@ -216,6 +216,17 @@ class AccessRequestForm(UserCreationForm):
         if commit:
             access_request.save()
         return access_request
+
+
+class FeedbackForm(forms.ModelForm):
+    class Meta:
+        model = Feedback
+        fields = ["category", "message"]
+        widgets = {
+            "message": forms.Textarea(
+                attrs={"rows": 6, "placeholder": "A bug, an idea, anything you'd like changed…"}
+            ),
+        }
 
 
 class AccountUserForm(forms.ModelForm):

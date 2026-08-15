@@ -5,6 +5,7 @@ from .models import (
     AccessRequest,
     DevotionalPrompt,
     Entry,
+    Feedback,
     Goal,
     IntrospectionPrompt,
     MomentCheckIn,
@@ -157,4 +158,14 @@ class AccessRequestAdmin(admin.ModelAdmin):
     list_display = ["username", "email", "status", "created_at", "decided_at"]
     list_filter = ["status"]
     readonly_fields = ["password_hash", "token", "created_at"]
+    ordering = ["-created_at"]
+
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ["user", "category", "status", "created_at"]
+    list_display_links = ["user"]
+    list_editable = ["status"]
+    list_filter = ["category", "status"]
+    readonly_fields = ["user", "category", "message", "created_at"]
     ordering = ["-created_at"]

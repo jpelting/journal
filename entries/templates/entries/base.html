@@ -463,6 +463,7 @@
         <a href="{% url 'entries:list' %}">Journals</a>
         <a href="{% url 'entries:calendar' %}">Calendar</a>
         <a href="{% url 'entries:export' %}">Export</a>
+        <a href="{% url 'entries:feedback' %}">Feedback</a>
         <a href="/admin/">Admin</a>
         <a href="{% url 'entries:account' %}" class="nav-user">{{ user.username }}</a>
         <form action="{% url 'logout' %}" method="post" class="logout-form">

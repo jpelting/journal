@@ -23,12 +23,23 @@ from .forms import (
     AccountUserForm,
     EntryForm,
     EveningCheckInForm,
+    FeedbackForm,
     GoalCompletionFormSet,
     GoalFormSet,
     MomentCheckInForm,
     MorningCheckInForm,
 )
-from .models import AccessRequest, DevotionalPrompt, Entry, IntrospectionPrompt, MomentCheckIn, Prayer, Profile, StoicPrompt
+from .models import (
+    AccessRequest,
+    DevotionalPrompt,
+    Entry,
+    Feedback,
+    IntrospectionPrompt,
+    MomentCheckIn,
+    Prayer,
+    Profile,
+    StoicPrompt,
+)
 from .weather import get_current_weather, get_tomorrow_forecast, weather_animation_for_summary
 
 JOURNAL_TYPES = {
@@ -138,6 +149,31 @@ def account_delete_view(request):
         messages.success(request, "Your account and all its data have been deleted.")
         return redirect("login")
     return redirect("entries:account")
+
+
+def feedback_view(request):
+    if request.method == "POST":
+        form = FeedbackForm(request.POST)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            feedback.user = request.user
+            feedback.save()
+            _notify_admin_of_feedback(request, feedback)
+            messages.success(request, "Thanks — your feedback has been sent.")
+            return redirect("entries:feedback")
+    else:
+        form = FeedbackForm()
+    return render(request, "entries/feedback.html", {"form": form})
+
+
+def _notify_admin_of_feedback(request, feedback):
+    context = {
+        "feedback": feedback,
+        "admin_url": request.build_absolute_uri(reverse("admin:entries_feedback_change", args=[feedback.pk])),
+    }
+    subject = render_to_string("entries/feedback_admin_subject.txt", context).strip()
+    body = render_to_string("entries/feedback_admin_email.txt", context)
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [settings.ADMIN_EMAIL])
 
 
 def _next_stoic_prompt(user):

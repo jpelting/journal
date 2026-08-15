@@ -299,3 +299,28 @@ class MomentCheckIn(models.Model):
 
     def __str__(self):
         return f"{self.created_at:%Y-%m-%d %H:%M} - {self.emotions}"
+
+
+class Feedback(models.Model):
+    CATEGORY_CHOICES = [
+        ("bug", "Bug report"),
+        ("feature", "Feature request"),
+        ("other", "Other"),
+    ]
+    STATUS_CHOICES = [
+        ("new", "New"),
+        ("reviewed", "Reviewed"),
+        ("resolved", "Resolved"),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="feedback_messages")
+    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default="other")
+    message = models.TextField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="new")
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_category_display()} from {self.user} ({self.created_at:%Y-%m-%d})"

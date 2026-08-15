@@ -1,0 +1,8 @@
+{% autoescape off %}{{ feedback.user }} ({{ feedback.user.email }}) sent feedback.
+
+Category: {{ feedback.get_category_display }}
+
+{{ feedback.message }}
+
+Review in admin: {{ admin_url }}
+{% endautoescape %}

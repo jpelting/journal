@@ -22,6 +22,7 @@ uv run manage.py seed_devotional_prompts     # idempotent load from entries/data
 uv run manage.py seed_introspection_prompts  # idempotent load from entries/data/introspection_prompts.json (365 questions, one per day-of-year)
 uv run manage.py seed_prayers               # idempotent load from entries/data/prayers.json (366 prayers, one per calendar day incl. Feb 29)
 uv run manage.py seed_stoic_practices        # idempotent load from entries/data/stoic_practices.json (52 weekly practices)
+uv run manage.py generate_announcements      # drafts What's New popup entries from recent git commits via the Claude API (needs ANTHROPIC_API_KEY); saved inactive for review
 ```
 
 Dependencies (Django, xhtml2pdf, django-debug-toolbar, cryptography, dj-database-url, psycopg, whitenoise, plus transitive deps like reportlab/Pillow/html5lib pulled in for PDF export) are declared in `pyproject.toml` and pinned in `uv.lock`. To add or change a dependency, use `uv add <package>` / `uv remove <package>` rather than editing `pyproject.toml` by hand, so the lockfile stays in sync.

@@ -1,0 +1,23 @@
+{% if unseen_announcements %}
+    <div class="modal-backdrop" id="announcements-modal-backdrop">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="announcements-modal-title">
+            <h2 id="announcements-modal-title">What&rsquo;s New</h2>
+            <form method="post" action="{% url 'entries:dismiss-announcements' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="modal-close" aria-label="Close">&times;</button>
+                {% for item in unseen_announcements %}
+                    <div class="announcement-item">
+                        <span class="announcement-badge announcement-badge-{{ item.category }}">
+                            {% if item.category == "feature" %}✨ New{% elif item.category == "fix" %}🔧 Fixed{% else %}🔄 Improved{% endif %}
+                        </span>
+                        <h3>{{ item.title }}</h3>
+                        <p>{{ item.description }}</p>
+                        {% if item.location %}<p class="helptext">Find it: {{ item.location }}</p>{% endif %}
+                    </div>
+                {% endfor %}
+                <button type="submit" class="btn">Got it</button>
+            </form>
+        </div>
+    </div>
+{% endif %}

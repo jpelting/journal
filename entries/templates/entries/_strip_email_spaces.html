@@ -1,0 +1,17 @@
+<script>
+    (function () {
+        function stripSpaces(input) {
+            var value = input.value;
+            if (!/\s/.test(value)) return;
+            var cursor = input.selectionStart;
+            var removedBefore = (value.slice(0, cursor).match(/\s/g) || []).length;
+            input.value = value.replace(/\s+/g, '');
+            var newCursor = cursor - removedBefore;
+            input.setSelectionRange(newCursor, newCursor);
+        }
+
+        document.querySelectorAll('input[type=email]').forEach(function (input) {
+            input.addEventListener('input', function () { stripSpaces(input); });
+        });
+    })();
+</script>

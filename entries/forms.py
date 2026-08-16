@@ -167,12 +167,17 @@ class MomentCheckInForm(forms.Form):
 
 
 class AccessRequestForm(UserCreationForm):
-    name = forms.CharField(max_length=150)
-    email = forms.EmailField()
-    date_of_birth = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
-    gender = forms.ChoiceField(choices=Profile.GENDER_CHOICES)
-    gender_self_description = forms.CharField(max_length=100, required=False)
-    zipcode = forms.CharField(max_length=10)
+    # This form is filled out on a shared/family device as often as a personal one, so every
+    # field disables browser autofill - otherwise one person's name/email/DOB can be offered
+    # to (or silently pre-filled for) whoever fills out the form next on that same browser.
+    name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={"autocomplete": "off"}))
+    email = forms.EmailField(widget=forms.EmailInput(attrs={"autocomplete": "off"}))
+    date_of_birth = forms.DateField(widget=forms.DateInput(attrs={"type": "date", "autocomplete": "off"}))
+    gender = forms.ChoiceField(choices=Profile.GENDER_CHOICES, widget=forms.Select(attrs={"autocomplete": "off"}))
+    gender_self_description = forms.CharField(
+        max_length=100, required=False, widget=forms.TextInput(attrs={"autocomplete": "off"})
+    )
+    zipcode = forms.CharField(max_length=10, widget=forms.TextInput(attrs={"autocomplete": "off"}))
 
     class Meta(UserCreationForm.Meta):
         model = get_user_model()

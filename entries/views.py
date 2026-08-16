@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
 from xhtml2pdf import pisa
 
@@ -60,7 +61,11 @@ def request_access_view(request):
             return render(request, "entries/request_access_sent.html")
     else:
         form = AccessRequestForm()
-    return render(request, "entries/request_access.html", {"form": form})
+    response = render(request, "entries/request_access.html", {"form": form})
+    # This is often filled out on a shared/family device - stop the browser's back/forward
+    # cache from restoring a stale copy with the previous person's data still in the fields.
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 def _notify_admin_of_access_request(request, access_request):
@@ -149,6 +154,20 @@ def account_delete_view(request):
         messages.success(request, "Your account and all its data have been deleted.")
         return redirect("login")
     return redirect("entries:account")
+
+
+def dismiss_announcements_view(request):
+    if request.method == "POST":
+        profile = getattr(request.user, "profile", None)
+        if profile:
+            profile.last_seen_announcement_at = timezone.now()
+            profile.save(update_fields=["last_seen_announcement_at"])
+
+        next_url = request.POST.get("next", "")
+        if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+            next_url = reverse("entries:home")
+        return redirect(next_url)
+    return redirect("entries:home")
 
 
 def feedback_view(request):

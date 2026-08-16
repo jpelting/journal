@@ -7,3 +7,4 @@ server.pid
 server.log
 staticfiles/
 PRODUCTION_SECRETS_DO_NOT_COMMIT.txt
+.announcement_gen_state.json

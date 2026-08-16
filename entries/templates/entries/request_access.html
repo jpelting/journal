@@ -104,6 +104,23 @@
             word-break: break-all;
         }
         .password-suggestion.visible { display: block; }
+        .password-checklist { list-style: none; padding: 0; margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--text-muted); }
+        .password-checklist li { display: flex; align-items: center; gap: 0.4rem; padding: 0.15rem 0; transition: color 0.15s ease; }
+        .password-checklist .check-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1rem;
+            height: 1rem;
+            flex-shrink: 0;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            font-size: 0.65rem;
+            color: transparent;
+            transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+        }
+        .password-checklist li.met { color: var(--success-text); }
+        .password-checklist li.met .check-mark { background: var(--success-text); border-color: var(--success-text); color: var(--accent-contrast); }
         .errorlist { color: var(--danger-text); list-style: none; padding: 0; margin: 0.4rem 0 0; font-size: 0.85rem; }
         .field-row { margin-bottom: 0.25rem; }
         .bottom-link { text-align: center; margin-top: 1.25rem; font-size: 0.9rem; }
@@ -113,7 +130,7 @@
     <div class="signup-card">
         <h1>Request access</h1>
         <p class="subtitle">The Wax Tablet is invite-only. Fill this out and the admin will review your request.</p>
-        <form method="post" novalidate>
+        <form method="post" novalidate autocomplete="off">
             {% csrf_token %}
             {{ form.non_field_errors }}
 
@@ -163,7 +180,12 @@
             <div class="field-row">
                 <label for="{{ form.password1.id_for_label }}">Password</label>
                 {{ form.password1 }}
-                {% if form.password1.help_text %}<p class="helptext">{{ form.password1.help_text|safe }}</p>{% endif %}
+                <ul class="password-checklist" id="password-checklist">
+                    <li data-check="length"><span class="check-mark">&#10003;</span> At least 8 characters</li>
+                    <li data-check="not-numeric"><span class="check-mark">&#10003;</span> Not all numbers</li>
+                    <li data-check="not-similar"><span class="check-mark">&#10003;</span> Not too close to your username or email</li>
+                </ul>
+                <p class="helptext">Also can't be a commonly used password &mdash; checked when you submit.</p>
                 {{ form.password1.errors }}
                 <button type="button" class="link-btn" id="suggest-password-btn">Suggest a strong password</button>
                 <div class="password-suggestion" id="password-suggestion"></div>
@@ -218,16 +240,59 @@
             return chars.join('');
         }
 
+        (function () {
+            var password1 = document.getElementById('{{ form.password1.id_for_label }}');
+            var usernameField = document.getElementById('{{ form.username.id_for_label }}');
+            var emailField = document.getElementById('{{ form.email.id_for_label }}');
+            var checklist = document.getElementById('password-checklist');
+            if (!password1 || !checklist) return;
+
+            function isSimilar(password, other) {
+                if (!other || other.length < 3) return false;
+                var p = password.toLowerCase();
+                var o = other.toLowerCase();
+                return p.indexOf(o) !== -1 || o.indexOf(p) !== -1;
+            }
+
+            function evaluate() {
+                var value = password1.value;
+                var username = usernameField ? usernameField.value : '';
+                var email = emailField ? emailField.value : '';
+                var emailLocal = email.split('@')[0];
+
+                var checks = {
+                    'length': value.length >= 8,
+                    'not-numeric': value.length > 0 && !/^\d+$/.test(value),
+                    'not-similar': value.length > 0
+                        && !isSimilar(value, username)
+                        && !isSimilar(value, emailLocal)
+                        && !isSimilar(value, email)
+                };
+
+                Object.keys(checks).forEach(function (key) {
+                    var item = checklist.querySelector('[data-check="' + key + '"]');
+                    if (item) item.classList.toggle('met', checks[key]);
+                });
+            }
+
+            password1.addEventListener('input', evaluate);
+            if (usernameField) usernameField.addEventListener('input', evaluate);
+            if (emailField) emailField.addEventListener('input', evaluate);
+            evaluate();
+        })();
+
         document.getElementById('suggest-password-btn').addEventListener('click', function () {
             var password = generateStrongPassword();
             var password1 = document.getElementById('{{ form.password1.id_for_label }}');
             var password2 = document.getElementById('{{ form.password2.id_for_label }}');
             password1.value = password;
             password2.value = password;
+            password1.dispatchEvent(new Event('input'));
             var suggestionBox = document.getElementById('password-suggestion');
             suggestionBox.textContent = password;
             suggestionBox.classList.add('visible');
         });
     </script>
+    {% include "entries/_strip_email_spaces.html" %}
 </body>
 </html>

@@ -238,6 +238,9 @@ class Profile(models.Model):
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES)
     gender_self_description = models.CharField(max_length=100, blank=True)
     zipcode = models.CharField(max_length=10)
+    last_seen_announcement_at = models.DateTimeField(
+        null=True, blank=True, help_text="When this user last dismissed the What's New popup."
+    )
 
     def __str__(self):
         return self.name
@@ -324,3 +327,34 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"{self.get_category_display()} from {self.user} ({self.created_at:%Y-%m-%d})"
+
+
+class Announcement(models.Model):
+    """A "What's New" note shown as a popup after sign-in until a user dismisses it.
+
+    Written for a non-technical reader: short, plain-language title and description,
+    plus an optional pointer to where in the app to find the change.
+    """
+
+    CATEGORY_CHOICES = [
+        ("feature", "New feature"),
+        ("fix", "Bug fix"),
+        ("improvement", "Improvement"),
+    ]
+
+    category = models.CharField(max_length=15, choices=CATEGORY_CHOICES, default="feature")
+    title = models.CharField(max_length=150, help_text="Short plain-language headline, e.g. 'Dictation now works on Safari'.")
+    description = models.TextField(help_text="1-2 short sentences in plain language, no technical jargon.")
+    location = models.CharField(
+        max_length=150,
+        blank=True,
+        help_text="Where to find it, e.g. 'Morning Check-in'. Leave blank for bug fixes with nothing new to find.",
+    )
+    is_active = models.BooleanField(default=True, help_text="Uncheck to stop showing this in the popup.")
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_category_display()}: {self.title}"

@@ -3,6 +3,7 @@ from django.contrib import admin
 from .bible import get_passage_text
 from .models import (
     AccessRequest,
+    Announcement,
     DevotionalPrompt,
     Entry,
     Feedback,
@@ -158,6 +159,14 @@ class AccessRequestAdmin(admin.ModelAdmin):
     list_display = ["username", "email", "status", "created_at", "decided_at"]
     list_filter = ["status"]
     readonly_fields = ["password_hash", "token", "created_at"]
+    ordering = ["-created_at"]
+
+
+@admin.register(Announcement)
+class AnnouncementAdmin(admin.ModelAdmin):
+    list_display = ["title", "category", "is_active", "created_at"]
+    list_filter = ["category", "is_active"]
+    list_editable = ["is_active"]
     ordering = ["-created_at"]
 
 

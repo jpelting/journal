@@ -18,6 +18,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
 from xhtml2pdf import pisa
 
+from .context_processors import SESSION_KEY as ANNOUNCEMENT_SESSION_KEY
 from .forms import (
     AccessRequestForm,
     AccountProfileForm,
@@ -158,10 +159,15 @@ def account_delete_view(request):
 
 def dismiss_announcements_view(request):
     if request.method == "POST":
+        now = timezone.now()
         profile = getattr(request.user, "profile", None)
         if profile:
-            profile.last_seen_announcement_at = timezone.now()
+            profile.last_seen_announcement_at = now
             profile.save(update_fields=["last_seen_announcement_at"])
+        else:
+            # No Profile to persist to (e.g. the original admin account) - fall back to
+            # the session so dismissal still works instead of the popup reappearing forever.
+            request.session[ANNOUNCEMENT_SESSION_KEY] = now.isoformat()
 
         next_url = request.POST.get("next", "")
         if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):

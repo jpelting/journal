@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import EMOTION_CHOICES, AccessRequest, Entry, Feedback, Goal, Profile
+from .models import EMOTION_CHOICES, AccessRequest, Entry, Feedback, Goal, Profile, SurveyResponse
 
 SLIDER_ATTRS = {"type": "range", "min": 1, "max": 10, "step": 1, "class": "slider"}
 SCORE_WIDGETS = {
@@ -257,3 +257,36 @@ class AccountProfileForm(forms.ModelForm):
         if cleaned_data.get("gender") == "self_describe" and not cleaned_data.get("gender_self_description"):
             self.add_error("gender_self_description", "Please describe your gender.")
         return cleaned_data
+
+
+class SurveyForm(forms.ModelForm):
+    class Meta:
+        model = SurveyResponse
+        fields = [
+            "overall_rating",
+            "most_used_section",
+            "least_used_section",
+            "feature_request",
+            "friction_feedback",
+            "reported_bug",
+            "bug_response_time_rating",
+            "appearance_rating",
+            "appearance_change",
+            "content_helpful",
+            "favorite_part",
+            "disliked_part",
+        ]
+        widgets = {
+            "overall_rating": forms.RadioSelect,
+            "most_used_section": forms.Select,
+            "least_used_section": forms.Select,
+            "feature_request": forms.Textarea(attrs={"rows": 3}),
+            "friction_feedback": forms.Textarea(attrs={"rows": 3}),
+            "reported_bug": forms.RadioSelect,
+            "bug_response_time_rating": forms.RadioSelect,
+            "appearance_rating": forms.RadioSelect,
+            "appearance_change": forms.Textarea(attrs={"rows": 3}),
+            "content_helpful": forms.RadioSelect,
+            "favorite_part": forms.Textarea(attrs={"rows": 3}),
+            "disliked_part": forms.Textarea(attrs={"rows": 3}),
+        }

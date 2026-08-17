@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin
+from django.contrib.auth.models import User
 
 from .bible import get_passage_text
 from .models import (
@@ -14,12 +16,28 @@ from .models import (
     Profile,
     StoicPractice,
     StoicPrompt,
+    SurveyResponse,
 )
 
 
 class GoalInline(admin.TabularInline):
     model = Goal
     extra = 0
+
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class UserAdmin(DefaultUserAdmin):
+    list_display = DefaultUserAdmin.list_display + ("login_count_display",)
+
+    def login_count_display(self, obj):
+        login_count = getattr(obj, "login_count", None)
+        return login_count.count if login_count else 0
+
+    login_count_display.short_description = "Sign-ins"
+    login_count_display.admin_order_field = "login_count__count"
 
 
 @admin.register(Entry)
@@ -178,3 +196,11 @@ class FeedbackAdmin(admin.ModelAdmin):
     list_filter = ["category", "status"]
     readonly_fields = ["user", "category", "message", "created_at"]
     ordering = ["-created_at"]
+
+
+@admin.register(SurveyResponse)
+class SurveyResponseAdmin(admin.ModelAdmin):
+    list_display = ["user", "overall_rating", "appearance_rating", "content_helpful", "declined_at", "completed_at"]
+    list_filter = ["overall_rating", "content_helpful", "reported_bug"]
+    readonly_fields = [field.name for field in SurveyResponse._meta.fields]
+    ordering = ["-completed_at"]

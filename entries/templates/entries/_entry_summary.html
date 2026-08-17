@@ -55,7 +55,10 @@
 
 {% if entry.introspection_response %}
     <h3>Introspection</h3>
-    {% if entry.introspection_prompt %}<p class="prompt">{{ entry.introspection_prompt.question }}</p>{% endif %}
+    {% if entry.introspection_prompt %}
+        {% if entry.introspection_prompt.principle_summary %}<p>{{ entry.introspection_prompt.principle_summary }}</p>{% endif %}
+        <p class="prompt">{{ entry.introspection_prompt.question }}</p>
+    {% endif %}
     <p>{{ entry.introspection_response|linebreaksbr }}</p>
 {% endif %}
 

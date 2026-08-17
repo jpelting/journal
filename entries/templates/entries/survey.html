@@ -1,0 +1,125 @@
+{% extends "entries/base.html" %}
+{% block title %}Survey - The Wax Tablet{% endblock %}
+{% block content %}
+    <div class="checkin-header">
+        <h1>Site Survey</h1>
+    </div>
+
+    {% if already_completed %}
+        <section class="part">
+            <p class="helptext">You already completed this survey on {{ response.completed_at|date:"F j, Y" }}. Thanks again!</p>
+        </section>
+    {% else %}
+        <section class="part">
+            <p class="helptext">A handful of quick questions about how The Wax Tablet is working for you. Skip anything you'd rather not answer.</p>
+
+            <form method="post" novalidate id="survey-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <h2>1. Overall, how satisfied are you with The Wax Tablet so far?</h2>
+                <div class="emotion-grid">
+                    {% for radio in form.overall_rating %}
+                        <label class="emotion-chip">{{ radio.tag }} {{ radio.choice_label }}</label>
+                    {% endfor %}
+                </div>
+
+                <h2>2. Which section do you use most, and which do you use least?</h2>
+                <label for="{{ form.most_used_section.id_for_label }}">Most used</label>
+                {{ form.most_used_section }}
+                <label for="{{ form.least_used_section.id_for_label }}">Least used</label>
+                {{ form.least_used_section }}
+
+                <h2>3. If you could add or expand one feature, what would it be?</h2>
+                <label for="{{ form.feature_request.id_for_label }}">Your answer</label>
+                {{ form.feature_request }}
+
+                <h2>4. Has anything been confusing, slow, or frustrating to use?</h2>
+                <label for="{{ form.friction_feedback.id_for_label }}">Your answer</label>
+                {{ form.friction_feedback }}
+
+                <h2>5. Have you reported any bugs or glitches while using the app?</h2>
+                <div class="emotion-grid">
+                    {% for radio in form.reported_bug %}
+                        <label class="emotion-chip">{{ radio.tag }} {{ radio.choice_label }}</label>
+                    {% endfor %}
+                </div>
+
+                <div id="bug-followup" hidden>
+                    <h2>6. How satisfied were you with how quickly it was addressed?</h2>
+                    <div class="emotion-grid">
+                        {% for radio in form.bug_response_time_rating %}
+                            <label class="emotion-chip">{{ radio.tag }} {{ radio.choice_label }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <h2>7. What do you think of the app's look and feel?</h2>
+                <div class="emotion-grid">
+                    {% for radio in form.appearance_rating %}
+                        <label class="emotion-chip">{{ radio.tag }} {{ radio.choice_label }}</label>
+                    {% endfor %}
+                </div>
+
+                <h2>8. What would you change about the appearance?</h2>
+                <label for="{{ form.appearance_change.id_for_label }}">Your answer</label>
+                {{ form.appearance_change }}
+
+                <h2>9. Did you find the content helpful?</h2>
+                <div class="emotion-grid">
+                    {% for radio in form.content_helpful %}
+                        <label class="emotion-chip">{{ radio.tag }} {{ radio.choice_label }}</label>
+                    {% endfor %}
+                </div>
+
+                <div id="favorite-part-wrap" hidden>
+                    <h2>10. What was your favorite part?</h2>
+                    <label for="{{ form.favorite_part.id_for_label }}">Your answer</label>
+                    {{ form.favorite_part }}
+                </div>
+
+                <div id="disliked-part-wrap" hidden>
+                    <h2>11. What did you not enjoy or use, and why?</h2>
+                    <label for="{{ form.disliked_part.id_for_label }}">Your answer</label>
+                    {{ form.disliked_part }}
+                </div>
+
+                <p class="form-actions"><button class="btn" type="submit">Submit survey</button></p>
+            </form>
+        </section>
+    {% endif %}
+
+    <script>
+        (function () {
+            var form = document.getElementById('survey-form');
+            if (!form) return;
+
+            function toggleOn(radios, matchValue, target) {
+                var checked = false;
+                radios.forEach(function (radio) {
+                    if (radio.checked && radio.value === matchValue) checked = true;
+                });
+                target.hidden = !checked;
+            }
+
+            var bugRadios = Array.prototype.slice.call(form.querySelectorAll('input[name="reported_bug"]'));
+            var bugFollowup = document.getElementById('bug-followup');
+            bugRadios.forEach(function (radio) {
+                radio.addEventListener('change', function () { toggleOn(bugRadios, 'yes', bugFollowup); });
+            });
+            toggleOn(bugRadios, 'yes', bugFollowup);
+
+            var helpfulRadios = Array.prototype.slice.call(form.querySelectorAll('input[name="content_helpful"]'));
+            var favoriteWrap = document.getElementById('favorite-part-wrap');
+            var dislikedWrap = document.getElementById('disliked-part-wrap');
+            helpfulRadios.forEach(function (radio) {
+                radio.addEventListener('change', function () {
+                    toggleOn(helpfulRadios, 'yes', favoriteWrap);
+                    toggleOn(helpfulRadios, 'no', dislikedWrap);
+                });
+            });
+            toggleOn(helpfulRadios, 'yes', favoriteWrap);
+            toggleOn(helpfulRadios, 'no', dislikedWrap);
+        })();
+    </script>
+{% endblock %}

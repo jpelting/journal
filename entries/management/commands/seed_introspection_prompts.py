@@ -15,16 +15,16 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        questions = json.loads(DATA_FILE.read_text(encoding="utf-8"))
-        if len(questions) != 365:
-            raise CommandError(f"Expected 365 questions, found {len(questions)}.")
+        items = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        if len(items) != 365:
+            raise CommandError(f"Expected 365 questions, found {len(items)}.")
 
         created = 0
         updated = 0
-        for day, question in enumerate(questions, start=1):
+        for day, item in enumerate(items, start=1):
             _, was_created = IntrospectionPrompt.objects.update_or_create(
                 day_of_year=day,
-                defaults={"question": question},
+                defaults={"question": item["question"], "principle_summary": item["principle_summary"]},
             )
             if was_created:
                 created += 1

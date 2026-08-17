@@ -91,6 +91,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'entries.context_processors.announcements',
+                'entries.context_processors.survey_prompt',
             ],
         },
     },
@@ -220,14 +221,15 @@ if not DEBUG and _DEV_FIELD_ENCRYPTION_KEY in FIELD_ENCRYPTION_KEYS:
     )
 
 
-# Bible passage lookups (devotional verse text), via the YouVersion Platform API.
-# Get an App Key at https://platform.youversion.com and set it as an env var —
-# never commit it.
+# Bible passage text for devotional prompts is hand-curated from the King James Version
+# (public domain, no permission/attribution required) in entries/data/devotional_prompts.json.
+#
+# entries/bible.py can optionally fetch verse text live from the YouVersion Platform API
+# instead, for devotional prompts added one-off through the admin without seed data — get a
+# free App Key at https://platform.youversion.com and set it as an env var (never commit it)
+# if you want that fallback. Without a key it silently no-ops and the hand-curated KJV text
+# (if any) is used as-is.
 
 YVP_APP_KEY = os.environ.get('YVP_APP_KEY', '')
-BIBLE_VERSION_ID = '111'  # NIV
-BIBLE_VERSION_ATTRIBUTION = (
-    "Scripture quotations taken from The Holy Bible, New International Version® NIV® "
-    "Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by permission. "
-    "All rights reserved worldwide."
-)
+BIBLE_VERSION_ID = '111'  # NIV, used only for the optional live-fetch fallback above
+BIBLE_VERSION_ATTRIBUTION = "King James Version (KJV), public domain."

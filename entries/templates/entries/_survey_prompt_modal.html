@@ -1,0 +1,17 @@
+{% if show_survey_prompt and not unseen_announcements %}
+    <div class="modal-backdrop" id="survey-prompt-modal-backdrop">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="survey-prompt-modal-title">
+            <form method="post" action="{% url 'entries:survey-decline' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="modal-close" aria-label="Close">&times;</button>
+                <h2 id="survey-prompt-modal-title">Got two minutes?</h2>
+                <p>You've been journaling for a couple weeks now — we'd love to hear how it's going. It's a short survey, and totally optional.</p>
+                <p class="form-actions">
+                    <a class="btn" href="{% url 'entries:survey' %}">Take the survey</a>
+                    <button type="submit" class="link-btn">No thanks</button>
+                </p>
+            </form>
+        </div>
+    </div>
+{% endif %}

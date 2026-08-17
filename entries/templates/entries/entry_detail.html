@@ -65,6 +65,7 @@
             <p class="prompt">{{ entry.devotional_prompt.reference }}{% if entry.devotional_prompt.verse_text %} — {{ entry.devotional_prompt.verse_text }}{% endif %}</p>
             {% if entry.devotional_prompt.verse_text %}<p class="helptext">{{ bible_attribution }}</p>{% endif %}
             {% if entry.devotional_prompt.context_summary %}<p>{{ entry.devotional_prompt.context_summary }}</p>{% endif %}
+            {% if entry.devotional_prompt.meaning_summary %}<p>{{ entry.devotional_prompt.meaning_summary }}</p>{% endif %}
             <p class="prompt">{{ entry.devotional_prompt.reflection_prompt }}</p>
         {% endif %}
         <p>{{ entry.devotional_response|default:"—"|linebreaksbr }}</p>
@@ -77,7 +78,10 @@
 
     <section class="part">
         <h2>5. Introspection</h2>
-        {% if entry.introspection_prompt %}<p class="prompt">{{ entry.introspection_prompt.question }}</p>{% endif %}
+        {% if entry.introspection_prompt %}
+            {% if entry.introspection_prompt.principle_summary %}<p>{{ entry.introspection_prompt.principle_summary }}</p>{% endif %}
+            <p class="prompt">{{ entry.introspection_prompt.question }}</p>
+        {% endif %}
         <p>{{ entry.introspection_response|default:"—"|linebreaksbr }}</p>
     </section>
 {% endblock %}

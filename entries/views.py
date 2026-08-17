@@ -30,6 +30,7 @@ from .forms import (
     GoalFormSet,
     MomentCheckInForm,
     MorningCheckInForm,
+    SurveyForm,
 )
 from .models import (
     AccessRequest,
@@ -41,6 +42,7 @@ from .models import (
     Prayer,
     Profile,
     StoicPrompt,
+    SurveyResponse,
 )
 from .weather import get_current_weather, get_tomorrow_forecast, weather_animation_for_summary
 
@@ -174,6 +176,37 @@ def dismiss_announcements_view(request):
             next_url = reverse("entries:home")
         return redirect(next_url)
     return redirect("entries:home")
+
+
+def survey_decline_view(request):
+    if request.method == "POST":
+        response, _ = SurveyResponse.objects.get_or_create(user=request.user)
+        response.declined_at = timezone.now()
+        response.save(update_fields=["declined_at"])
+
+        next_url = request.POST.get("next", "")
+        if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+            next_url = reverse("entries:home")
+        return redirect(next_url)
+    return redirect("entries:home")
+
+
+def survey_view(request):
+    response, _ = SurveyResponse.objects.get_or_create(user=request.user)
+    if response.completed_at:
+        return render(request, "entries/survey.html", {"already_completed": True, "response": response})
+
+    if request.method == "POST":
+        form = SurveyForm(request.POST, instance=response)
+        if form.is_valid():
+            response = form.save(commit=False)
+            response.completed_at = timezone.now()
+            response.save()
+            messages.success(request, "Thanks for taking the time — your feedback helps shape what's next.")
+            return redirect("entries:home")
+    else:
+        form = SurveyForm(instance=response)
+    return render(request, "entries/survey.html", {"form": form})
 
 
 def feedback_view(request):
@@ -350,16 +383,17 @@ WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 
 MOOD_BANDS = [
-    (2, 10),   # red: 1-2
-    (5, 30),   # orange: 3-5
-    (7, 50),   # yellow: 6-7
-    (10, 110),  # green: 8-10
+    (2, 0),    # red: 1-2
+    (5, 32),   # orange: 3-5
+    (7, 52),   # yellow: 6-7
+    (10, 125),  # green: 8-10
 ]
 
 # Saturation scales with how many of the 4 dimensions have data, so a day
 # with one lonely score reads as a faint hint rather than a fully-confident color.
-MOOD_MIN_SATURATION = 15
-MOOD_MAX_SATURATION = 45
+MOOD_MIN_SATURATION = 40
+MOOD_MAX_SATURATION = 75
+MOOD_LIGHTNESS = 78
 
 
 def _mood_color(entry):
@@ -377,7 +411,7 @@ def _mood_color(entry):
     saturation = MOOD_MIN_SATURATION + (MOOD_MAX_SATURATION - MOOD_MIN_SATURATION) * (
         len(present) - 1
     ) / (len(dimension_scores) - 1)
-    return f"hsl({hue}, {saturation:.0f}%, 85%)"
+    return f"hsl({hue}, {saturation:.0f}%, {MOOD_LIGHTNESS}%)"
 
 
 def calendar_view(request, year=None, month=None):

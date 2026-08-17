@@ -28,8 +28,15 @@ class StoicPrompt(models.Model):
 class DevotionalPrompt(models.Model):
     reference = models.CharField(max_length=100, help_text="Scripture reference, e.g. 'Philippians 4:6-7'.")
     verse_text = models.TextField(blank=True, help_text="The passage text, if you want it displayed.")
-    context_summary = models.TextField(blank=True, help_text="Brief context/meaning summary shown under the verse text.")
-    reflection_prompt = models.TextField(help_text="A guiding question for the devotional reflection.")
+    context_summary = models.TextField(
+        blank=True, help_text="2-3 sentences of historical/authorial context: who wrote it, to whom, and why."
+    )
+    meaning_summary = models.TextField(
+        blank=True, help_text="2-3 sentences explaining what the passage means."
+    )
+    reflection_prompt = models.TextField(
+        help_text="A question asking how the passage's principle could be applied in a modern way in the user's life."
+    )
     active = models.BooleanField(default=True)
 
     class Meta:
@@ -44,6 +51,9 @@ class IntrospectionPrompt(models.Model):
         unique=True, validators=[MinValueValidator(1), MaxValueValidator(365)]
     )
     question = models.TextField()
+    principle_summary = models.TextField(
+        help_text="2-3 sentences explaining the principle or idea behind the question, shown before it."
+    )
 
     class Meta:
         ordering = ["day_of_year"]
@@ -358,3 +368,88 @@ class Announcement(models.Model):
 
     def __str__(self):
         return f"{self.get_category_display()}: {self.title}"
+
+
+class LoginCount(models.Model):
+    """Tracks how many times each user has signed in, shown as a column on the admin User list.
+
+    Kept as its own model (rather than a field on `Profile`) so it applies to every
+    `User`, including ones with no `Profile` row (e.g. accounts made via `createsuperuser`).
+    """
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="login_count")
+    count = models.PositiveIntegerField(default=0)
+    last_login_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user}: {self.count}"
+
+
+SURVEY_ELIGIBLE_ACCOUNT_AGE_DAYS = 14
+SURVEY_DECLINE_COOLDOWN_DAYS = 90
+
+RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
+YES_NO_CHOICES = [("yes", "Yes"), ("no", "No")]
+
+
+class SurveyResponse(models.Model):
+    """One user's answers to the one-time site-feedback survey, first offered on day 14
+    after signup (see SURVEY_ELIGIBLE_ACCOUNT_AGE_DAYS) via entries.context_processors.
+    A decline re-arms the prompt after SURVEY_DECLINE_COOLDOWN_DAYS; a completion is final.
+    """
+
+    SECTION_CHOICES = [
+        ("checkin_morning", "Morning Check-in"),
+        ("checkin_evening", "Evening Check-in"),
+        ("stoic", "Stoic Journal"),
+        ("devotional", "Devotional"),
+        ("freeform", "Freeform Journal"),
+        ("introspection", "Introspection"),
+    ]
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="survey_response")
+    declined_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    overall_rating = models.PositiveSmallIntegerField(
+        choices=RATING_CHOICES, null=True, blank=True,
+        help_text="1. Overall, how satisfied are you with The Wax Tablet so far?",
+    )
+    most_used_section = models.CharField(
+        max_length=20, choices=SECTION_CHOICES, blank=True, help_text="2. Which section do you use most?"
+    )
+    least_used_section = models.CharField(
+        max_length=20, choices=SECTION_CHOICES, blank=True, help_text="2. Which section do you use least?"
+    )
+    feature_request = models.TextField(
+        blank=True, help_text="3. If you could add or expand one feature, what would it be?"
+    )
+    friction_feedback = models.TextField(
+        blank=True, help_text="4. Has anything been confusing, slow, or frustrating to use?"
+    )
+    reported_bug = models.CharField(
+        max_length=3, choices=YES_NO_CHOICES, blank=True,
+        help_text="5. Have you reported any bugs or glitches while using the app?",
+    )
+    bug_response_time_rating = models.PositiveSmallIntegerField(
+        choices=RATING_CHOICES, null=True, blank=True,
+        help_text="6. How satisfied were you with how quickly it was addressed? (shown if Q5 is yes)",
+    )
+    appearance_rating = models.PositiveSmallIntegerField(
+        choices=RATING_CHOICES, null=True, blank=True, help_text="7. What do you think of the app's look and feel?"
+    )
+    appearance_change = models.TextField(
+        blank=True, help_text="8. What would you change about the appearance?"
+    )
+    content_helpful = models.CharField(
+        max_length=3, choices=YES_NO_CHOICES, blank=True, help_text="9. Did you find the content helpful?"
+    )
+    favorite_part = models.TextField(
+        blank=True, help_text="10. What was your favorite part? (shown if Q9 is yes)"
+    )
+    disliked_part = models.TextField(
+        blank=True, help_text="11. What did you not enjoy or use and why? (shown if Q9 is no)"
+    )
+
+    def __str__(self):
+        return f"Survey response: {self.user}"

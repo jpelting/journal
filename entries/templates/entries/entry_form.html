@@ -56,6 +56,7 @@
                 </p>
                 {% if devotional_prompt_obj.verse_text %}<p class="helptext">{{ bible_attribution }}</p>{% endif %}
                 {% if devotional_prompt_obj.context_summary %}<p>{{ devotional_prompt_obj.context_summary }}</p>{% endif %}
+                {% if devotional_prompt_obj.meaning_summary %}<p>{{ devotional_prompt_obj.meaning_summary }}</p>{% endif %}
                 <p class="prompt">{{ devotional_prompt_obj.reflection_prompt }}</p>
             {% endif %}
             {{ form.devotional_prompt }}
@@ -72,6 +73,7 @@
         <section class="part tab-section{% if active_section == "introspection" %} active{% endif %}" id="tab-introspection">
             <h2 class="entry-section-title">Introspection</h2>
             {% if introspection_prompt_obj %}
+                {% if introspection_prompt_obj.principle_summary %}<p>{{ introspection_prompt_obj.principle_summary }}</p>{% endif %}
                 <p class="prompt">{{ introspection_prompt_obj.question }}</p>
             {% endif %}
             <label for="{{ form.introspection_response.id_for_label }}">Your reflection</label>

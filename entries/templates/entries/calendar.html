@@ -3,6 +3,7 @@
 {% block bodyclass %}wide{% endblock %}
 {% block content %}
     <h1>{{ month_name }} {{ year }}</h1>
+    <p class="form-actions"><button type="button" class="btn" id="calendar-legend-btn">Calendar Legend</button></p>
     <div class="calendar-nav">
         <a href="{% url 'entries:calendar' prev_year prev_month %}">&laquo; Prev</a>
         <a href="{% url 'entries:calendar' %}">Today</a>
@@ -46,12 +47,59 @@
     </table>
     </div>
 
-    <div class="calendar-legend">
-        <span class="legend-item"><span class="legend-swatch" style="background: hsl(10, 45%, 85%);"></span>1&ndash;2</span>
-        <span class="legend-item"><span class="legend-swatch" style="background: hsl(30, 45%, 85%);"></span>3&ndash;5</span>
-        <span class="legend-item"><span class="legend-swatch" style="background: hsl(50, 45%, 85%);"></span>6&ndash;7</span>
-        <span class="legend-item"><span class="legend-swatch" style="background: hsl(110, 45%, 85%);"></span>8&ndash;10</span>
-        <span class="legend-item legend-note">Paler = fewer dimensions logged that day</span>
+    <div class="modal-backdrop" id="calendar-legend-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="calendar-legend-modal-title">
+            <button type="button" class="modal-close" id="calendar-legend-modal-close" aria-label="Close">&times;</button>
+            <h2 id="calendar-legend-modal-title">How to read this calendar</h2>
+            <div class="cal-legend-diagram">
+                <svg class="cal-legend-connectors" viewBox="0 0 150 100" preserveAspectRatio="none">
+                    <line x1="32" y1="41" x2="75" y2="19"></line>
+                    <circle cx="32" cy="41" r="1.4"></circle>
+                    <line x1="44" y1="62" x2="75" y2="50"></line>
+                    <circle cx="44" cy="62" r="1.4"></circle>
+                    <line x1="38" y1="52" x2="75" y2="82"></line>
+                    <circle cx="38" cy="52" r="1.4"></circle>
+                </svg>
+
+                <div class="cal-legend-grid-wrap">
+                    <div class="cal-legend-cell is-faded"></div>
+                    <div class="cal-legend-cell is-faded"></div>
+                    <div class="cal-legend-cell is-faded"></div>
+                    <div class="cal-legend-cell is-faded"></div>
+                    <div class="cal-legend-cell is-focus">
+                        <span class="cal-legend-date">14</span>
+                        <span class="cal-legend-scores"><span>M7</span><span>P6</span><span>E8</span><span>S7</span></span>
+                    </div>
+                    <div class="cal-legend-cell is-faded"></div>
+                    <div class="cal-legend-cell is-faded"></div>
+                    <div class="cal-legend-cell is-faded"></div>
+                    <div class="cal-legend-cell is-faded"></div>
+                </div>
+
+                <div class="cal-legend-callouts">
+                    <div class="cal-legend-callout" style="top: 4%;">
+                        <span class="callout-label">Date</span>
+                        <p>Click any day to open a quick summary of that day's entries.</p>
+                    </div>
+                    <div class="cal-legend-callout" style="top: 36%;">
+                        <span class="callout-label">Scores</span>
+                        <p>M / P / E / S = Mental, Physical, Emotional, Spiritual — averaged from that day's morning and evening check-ins.</p>
+                    </div>
+                    <div class="cal-legend-callout" style="top: 70%;">
+                        <span class="callout-label">Cell color</span>
+                        <p>A heat map blended from those four scores, red (low) to green (high) — scan a month at a glance to spot trends.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calendar-legend">
+                <span class="legend-item"><span class="legend-swatch" style="background: hsl(0, 75%, 78%);"></span>1&ndash;2</span>
+                <span class="legend-item"><span class="legend-swatch" style="background: hsl(32, 75%, 78%);"></span>3&ndash;5</span>
+                <span class="legend-item"><span class="legend-swatch" style="background: hsl(52, 75%, 78%);"></span>6&ndash;7</span>
+                <span class="legend-item"><span class="legend-swatch" style="background: hsl(125, 75%, 78%);"></span>8&ndash;10</span>
+                <span class="legend-item legend-note">Paler = fewer dimensions logged that day</span>
+            </div>
+        </div>
     </div>
 
     {% for week in weeks %}
@@ -97,6 +145,24 @@
             });
 
             document.getElementById("day-modal-close").addEventListener("click", closeModal);
+            backdrop.addEventListener("click", function (event) {
+                if (event.target === backdrop) closeModal();
+            });
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape" && !backdrop.hidden) closeModal();
+            });
+        })();
+
+        (function () {
+            var backdrop = document.getElementById("calendar-legend-modal-backdrop");
+            var openBtn = document.getElementById("calendar-legend-btn");
+            var closeBtn = document.getElementById("calendar-legend-modal-close");
+
+            function openModal() { backdrop.hidden = false; }
+            function closeModal() { backdrop.hidden = true; }
+
+            openBtn.addEventListener("click", openModal);
+            closeBtn.addEventListener("click", closeModal);
             backdrop.addEventListener("click", function (event) {
                 if (event.target === backdrop) closeModal();
             });

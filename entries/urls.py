@@ -21,6 +21,8 @@ urlpatterns = [
     path("account/delete/", views.account_delete_view, name="account-delete"),
     path("feedback/", views.feedback_view, name="feedback"),
     path("announcements/dismiss/", views.dismiss_announcements_view, name="dismiss-announcements"),
+    path("survey/", views.survey_view, name="survey"),
+    path("survey/decline/", views.survey_decline_view, name="survey-decline"),
     path("<int:pk>/", views.EntryDetailView.as_view(), name="detail"),
     path("<int:pk>/edit/", views.EntryUpdateView.as_view(), name="edit"),
 ]

@@ -5,6 +5,7 @@ db.sqlite3
 .env
 server.pid
 server.log
+server.err.log
 staticfiles/
 PRODUCTION_SECRETS_DO_NOT_COMMIT.txt
 .announcement_gen_state.json

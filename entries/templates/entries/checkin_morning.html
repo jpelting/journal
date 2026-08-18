@@ -35,13 +35,16 @@
         <section class="part">
             <h2>Goals for today</h2>
             {{ goal_formset.management_form }}
-            {% for gform in goal_formset %}
-                <div class="goal-row">
-                    {{ gform.id }}
-                    {{ gform.text }}
-                    {{ gform.text.errors }}
-                </div>
-            {% endfor %}
+            <div id="goal-rows">
+                {% for gform in goal_formset %}
+                    <div class="goal-row{% if forloop.counter0 >= goal_visible_count %} goal-row-hidden{% endif %}">
+                        {{ gform.id }}
+                        {{ gform.text }}
+                        {{ gform.text.errors }}
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-secondary" id="add-goal-btn">Add Another Goal</button>
         </section>
 
         <section class="part">
@@ -91,5 +94,25 @@
                 output.textContent = slider.value;
             });
         });
+
+        (function () {
+            var addGoalBtn = document.getElementById('add-goal-btn');
+
+            function updateAddGoalButton() {
+                addGoalBtn.hidden = document.querySelectorAll('#goal-rows .goal-row-hidden').length === 0;
+            }
+
+            addGoalBtn.addEventListener('click', function () {
+                var nextRow = document.querySelector('#goal-rows .goal-row-hidden');
+                if (nextRow) {
+                    nextRow.classList.remove('goal-row-hidden');
+                    var input = nextRow.querySelector('input[type="text"]');
+                    if (input) input.focus();
+                }
+                updateAddGoalButton();
+            });
+
+            updateAddGoalButton();
+        })();
     </script>
 {% endblock %}

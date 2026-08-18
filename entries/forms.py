@@ -104,7 +104,10 @@ class MorningCheckInForm(ScopedEntrySaveMixin, ScoreSliderMinFixMixin, forms.Mod
         widgets = {
             **SCORE_WIDGETS,
             "one_percent_goal": forms.Textarea(
-                attrs={"rows": 2, "placeholder": "What's one small thing that would make today 1% better?"}
+                attrs={
+                    "rows": 2,
+                    "placeholder": "What's one small thing you could do or think differently today to be 1% better?",
+                }
             ),
             "morning_anxious_about": forms.Textarea(attrs={"rows": 2}),
             "morning_within_control": forms.Textarea(attrs={"rows": 2}),
@@ -137,12 +140,15 @@ class EveningCheckInForm(ScopedEntrySaveMixin, ScoreSliderMinFixMixin, forms.Mod
         }
 
 
+GOAL_MAX_COUNT = 10
+
 GoalFormSet = forms.inlineformset_factory(
     Entry,
     Goal,
     fields=["text"],
-    extra=6,
-    max_num=20,
+    extra=GOAL_MAX_COUNT,
+    max_num=GOAL_MAX_COUNT,
+    validate_max=True,
     can_delete=True,
     widgets={"text": forms.TextInput(attrs={"placeholder": "Add a goal for today..."})},
 )

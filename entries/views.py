@@ -1,6 +1,7 @@
 import calendar
 from datetime import date
 from io import BytesIO
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib import messages
@@ -44,7 +45,12 @@ from .models import (
     StoicPrompt,
     SurveyResponse,
 )
-from .weather import get_current_weather, get_tomorrow_forecast, weather_animation_for_summary
+from .weather import (
+    get_current_weather,
+    get_tomorrow_forecast,
+    weather_animation_for_summary,
+    weather_location_for_user,
+)
 
 JOURNAL_TYPES = {
     "stoic": {"label": "Stoic Reflections", "description": "Guided reflections on Stoic quotes and prompts."},
@@ -467,14 +473,39 @@ def _today_entry(user):
     return entry
 
 
+def _checkin_availability(now):
+    """Morning check-in runs 12:01am-12:00pm; evening follow-up is the complement
+    (12:01pm-12:00am), so the two windows never overlap and never gap."""
+    minutes_since_midnight = now.hour * 60 + now.minute
+    morning_available = 1 <= minutes_since_midnight <= 12 * 60
+    return morning_available, not morning_available
+
+
+def _local_now(timezone_name):
+    """The current time in a user's own timezone (resolved from their zip code),
+    falling back to the server's local time if the zone name is ever unusable."""
+    try:
+        return timezone.now().astimezone(ZoneInfo(timezone_name))
+    except Exception:
+        return timezone.localtime()
+
+
 def checkin_view(request):
-    return redirect("entries:checkin-morning")
+    _, _, _, timezone_name = weather_location_for_user(request.user)
+    morning_available, _ = _checkin_availability(_local_now(timezone_name))
+    return redirect("entries:checkin-morning" if morning_available else "entries:checkin-evening")
 
 
 def checkin_morning_view(request):
+    latitude, longitude, location_name, timezone_name = weather_location_for_user(request.user)
+    now = _local_now(timezone_name)
+    morning_available, evening_available = _checkin_availability(now)
+    if not morning_available:
+        return redirect("entries:checkin-evening")
+
     entry = _today_entry(request.user)
     if not entry.weather_summary:
-        summary = get_current_weather()
+        summary = get_current_weather(latitude, longitude)
         if summary:
             entry.weather_summary = summary
             entry.save(update_fields=["weather_summary"])
@@ -497,8 +528,11 @@ def checkin_morning_view(request):
             "entry": entry,
             "form": form,
             "goal_formset": goal_formset,
-            "now": timezone.localtime(),
-            "weather_location": settings.WEATHER_LOCATION_NAME,
+            "goal_visible_count": max(entry.goals.count(), 1),
+            "now": now,
+            "morning_available": morning_available,
+            "evening_available": evening_available,
+            "weather_location": location_name,
             "weather_animation": weather_animation_for_summary(entry.weather_summary),
             "today_prayer": Prayer.for_date(timezone.localdate()),
         },
@@ -506,9 +540,15 @@ def checkin_morning_view(request):
 
 
 def checkin_evening_view(request):
+    latitude, longitude, location_name, timezone_name = weather_location_for_user(request.user)
+    now = _local_now(timezone_name)
+    morning_available, evening_available = _checkin_availability(now)
+    if not evening_available:
+        return redirect("entries:checkin-morning")
+
     entry = _today_entry(request.user)
     if not entry.forecast_summary:
-        summary = get_tomorrow_forecast()
+        summary = get_tomorrow_forecast(latitude, longitude)
         if summary:
             entry.forecast_summary = summary
             entry.save(update_fields=["forecast_summary"])
@@ -536,8 +576,10 @@ def checkin_evening_view(request):
             "form": form,
             "goal_formset": goal_formset,
             "percent_complete": percent_complete,
-            "now": timezone.localtime(),
-            "weather_location": settings.WEATHER_LOCATION_NAME,
+            "now": now,
+            "morning_available": morning_available,
+            "evening_available": evening_available,
+            "weather_location": location_name,
             "forecast_animation": weather_animation_for_summary(entry.forecast_summary),
             "today_prayer": Prayer.for_date(timezone.localdate()),
         },
@@ -558,13 +600,19 @@ def checkin_moment_view(request):
     else:
         form = MomentCheckInForm()
 
+    _, _, _, timezone_name = weather_location_for_user(request.user)
+    now = _local_now(timezone_name)
+    morning_available, evening_available = _checkin_availability(now)
+
     return render(
         request,
         "entries/checkin_moment.html",
         {
             "form": form,
             "recent_moments": MomentCheckIn.objects.filter(user=request.user)[:10],
-            "now": timezone.localtime(),
+            "now": now,
+            "morning_available": morning_available,
+            "evening_available": evening_available,
             "today_prayer": Prayer.for_date(timezone.localdate()),
         },
     )

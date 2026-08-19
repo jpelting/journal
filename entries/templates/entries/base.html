@@ -394,6 +394,13 @@
         }
         .modal h2 { margin-top: 0; }
         .modal h3 { margin-bottom: 0.25rem; color: var(--accent); font-size: 1rem; }
+        .entry-saved-modal { text-align: center; }
+        .entry-saved-title {
+            font-family: 'Cinzel', Georgia, serif;
+            color: var(--accent);
+            letter-spacing: 0.08em;
+        }
+        .entry-saved-actions { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
         .announcement-item { padding: 0.85rem 0; border-bottom: 1px solid var(--border-subtle); }
         .announcement-item:last-of-type { border-bottom: none; }
         .announcement-item h3 { margin-top: 0.4rem; }
@@ -529,6 +536,7 @@
     {% endif %}
     {% include "entries/_announcements_modal.html" %}
     {% include "entries/_survey_prompt_modal.html" %}
+    {% include "entries/_entry_saved_modal.html" %}
     {% block content %}{% endblock %}
     <script>
         (function () {

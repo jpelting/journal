@@ -1,0 +1,15 @@
+{% if show_entry_saved_modal and not unseen_announcements and not show_survey_prompt %}
+    <div class="modal-backdrop" id="entry-saved-modal-backdrop">
+        <div class="modal entry-saved-modal" role="dialog" aria-modal="true" aria-labelledby="entry-saved-modal-title">
+            <a href="{{ request.path }}" class="modal-close" aria-label="Close">&times;</a>
+            <h2 id="entry-saved-modal-title" class="entry-saved-title">Etched in Stone</h2>
+            <p>Your {{ entry_saved_label }} has been saved.</p>
+            <p>Small efforts, repeated daily, carve out big change.</p>
+            <p>Would you like to journal now?</p>
+            <div class="entry-saved-actions">
+                <a class="btn" href="{% url 'entries:list' %}">Journal now</a>
+                <a class="link-btn" href="{{ request.path }}">Not right now</a>
+            </div>
+        </div>
+    </div>
+{% endif %}

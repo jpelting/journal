@@ -324,6 +324,10 @@ class EntryDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["bible_attribution"] = settings.BIBLE_VERSION_ATTRIBUTION
+        journal_type = self.request.GET.get("type")
+        journal_type_info = JOURNAL_TYPES.get(journal_type)
+        context["show_entry_saved_modal"] = self.request.GET.get("saved") == "1"
+        context["entry_saved_label"] = f"{journal_type_info['label']} entry" if journal_type_info else "journal entry"
         return context
 
 
@@ -355,6 +359,13 @@ class EntryFormMixin:
     def _journal_type_param(self):
         value = self.request.GET.get("type") or self.request.POST.get("type")
         return value if value in JOURNAL_TYPES else None
+
+    def get_success_url(self):
+        url = self.object.get_absolute_url()
+        journal_type = self._journal_type_param()
+        if journal_type:
+            return f"{url}?saved=1&type={journal_type}"
+        return f"{url}?saved=1"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -516,7 +527,7 @@ def checkin_morning_view(request):
         if form.is_valid() and goal_formset.is_valid():
             form.save()
             goal_formset.save()
-            return redirect("entries:checkin-morning")
+            return redirect(f"{reverse('entries:checkin-morning')}?saved=1")
     else:
         form = MorningCheckInForm(instance=entry)
         goal_formset = GoalFormSet(instance=entry, prefix="goals")
@@ -535,6 +546,8 @@ def checkin_morning_view(request):
             "weather_location": location_name,
             "weather_animation": weather_animation_for_summary(entry.weather_summary),
             "today_prayer": Prayer.for_date(timezone.localdate()),
+            "show_entry_saved_modal": request.GET.get("saved") == "1",
+            "entry_saved_label": "morning check-in",
         },
     )
 
@@ -559,7 +572,7 @@ def checkin_evening_view(request):
         if form.is_valid() and goal_formset.is_valid():
             form.save()
             goal_formset.save()
-            return redirect("entries:checkin-evening")
+            return redirect(f"{reverse('entries:checkin-evening')}?saved=1")
     else:
         form = EveningCheckInForm(instance=entry)
         goal_formset = GoalCompletionFormSet(instance=entry, prefix="goals")
@@ -582,6 +595,8 @@ def checkin_evening_view(request):
             "weather_location": location_name,
             "forecast_animation": weather_animation_for_summary(entry.forecast_summary),
             "today_prayer": Prayer.for_date(timezone.localdate()),
+            "show_entry_saved_modal": request.GET.get("saved") == "1",
+            "entry_saved_label": "evening check-in",
         },
     )
 

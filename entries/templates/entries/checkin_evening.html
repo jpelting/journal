@@ -34,9 +34,9 @@
 
         <section class="part">
             <h2>Today's goals</h2>
+            {{ goal_formset.management_form }}
             {% if goal_formset.forms %}
                 <p class="scores">{{ percent_complete }}% complete</p>
-                {{ goal_formset.management_form }}
                 {% for gform in goal_formset %}
                     {{ gform.id }}
                     <label class="goal-check">

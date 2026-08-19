@@ -1,0 +1,80 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<p><a href="{% url 'admin:index' %}">&larr; Back to admin</a></p>
+
+<h2>Download report</h2>
+<form method="get" action="{% url 'admin:activity-report' %}" style="margin-bottom:20px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+  <div>
+    <label for="report-start" style="display:block; font-size:11px;">From</label>
+    <input type="date" id="report-start" name="start" value="{{ default_start|date:'Y-m-d' }}">
+  </div>
+  <div>
+    <label for="report-end" style="display:block; font-size:11px;">To</label>
+    <input type="date" id="report-end" name="end" value="{{ default_end|date:'Y-m-d' }}">
+  </div>
+  <div>
+    <label for="report-format" style="display:block; font-size:11px;">Format</label>
+    <select id="report-format" name="format">
+      <option value="csv">CSV</option>
+      <option value="pdf">PDF</option>
+    </select>
+  </div>
+  <button type="submit" class="button">Download report</button>
+</form>
+<p style="font-size:11px; color:#666; margin-top:-14px;">
+  Includes feature usage totals, daily/weekly active-user trends, and a per-user activity summary for the chosen range — no entry content.
+</p>
+
+<h2>Active now (last {{ active_window_minutes }} min)</h2>
+{% if active_now %}
+<ul>
+  {% for lc in active_now %}
+    <li>🟢 <strong>{{ lc.user.username }}</strong> — active {{ lc.last_activity_at|timesince }} ago</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No one is currently active.</p>
+{% endif %}
+
+<h2>All users</h2>
+<table>
+  <thead>
+    <tr><th>User</th><th>Sign-ins</th><th>Last sign-in</th><th>Last seen</th></tr>
+  </thead>
+  <tbody>
+    {% for lc in login_counts %}
+    <tr>
+      <td>{{ lc.user.username }}</td>
+      <td>{{ lc.count }}</td>
+      <td>{% if lc.last_login_at %}{{ lc.last_login_at|timesince }} ago{% else %}—{% endif %}</td>
+      <td>{% if lc.last_activity_at %}{{ lc.last_activity_at|timesince }} ago{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Feature usage (last {{ window_days }} days)</h2>
+{% if feature_bars %}
+{% for bar in feature_bars %}
+<div style="margin-bottom:8px;">
+  <div style="font-size:12px; margin-bottom:2px;">{{ bar.label }} — {{ bar.count }}</div>
+  <div style="background:#417690; height:14px; width:{{ bar.pct }}%; min-width:2px; border-radius:2px;"></div>
+</div>
+{% endfor %}
+{% else %}
+<p>No feature usage recorded yet.</p>
+{% endif %}
+
+<h2>Daily active users (last {{ window_days }} days)</h2>
+<div style="display:flex; align-items:flex-end; gap:3px; height:100px; border-bottom:1px solid #ccc; padding-bottom:2px;">
+  {% for bar in daily_bars %}
+    <div title="{{ bar.date }}: {{ bar.count }} active" style="width:10px; height:{{ bar.pct }}%; min-height:{% if bar.count %}2px{% else %}0{% endif %}; background:#79aec8;"></div>
+  {% endfor %}
+</div>
+{% with last_bar=daily_bars|last %}
+<div style="font-size:11px; color:#666; margin-top:4px;">
+  {{ daily_bars.0.date }} through {{ last_bar.date }}
+</div>
+{% endwith %}
+{% endblock %}

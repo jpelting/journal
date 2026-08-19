@@ -380,9 +380,49 @@ class LoginCount(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="login_count")
     count = models.PositiveIntegerField(default=0)
     last_login_at = models.DateTimeField(null=True, blank=True)
+    last_activity_at = models.DateTimeField(
+        null=True, blank=True, help_text="Last authenticated request seen from this user, updated on any page view (not just sign-in). Powers the admin 'active now' view."
+    )
 
     def __str__(self):
         return f"{self.user}: {self.count}"
+
+
+class FeatureUsageEvent(models.Model):
+    """One row per (user, feature, day) a feature was touched — deduped server-side so repeat
+    page loads in the same day don't inflate counts. Powers the admin activity dashboard.
+    Deliberately records only *which feature*, never any journal content.
+    """
+
+    FEATURE_CHOICES = [
+        ("checkin_morning", "Morning Check-in"),
+        ("checkin_evening", "Evening Check-in"),
+        ("checkin_moment", "Moment Check-in"),
+        ("calendar", "Calendar"),
+        ("journals_hub", "Journals Hub"),
+        ("journal_stoic", "Journals: Stoic"),
+        ("journal_devotional", "Journals: Devotional"),
+        ("journal_freeform", "Journals: Freeform"),
+        ("journal_introspection", "Journals: Introspection"),
+        ("entry_create", "New Entry"),
+        ("entry_edit", "Edit Entry"),
+        ("entry_detail", "View Entry"),
+        ("export", "Export"),
+        ("account", "Account"),
+        ("feedback", "Feedback"),
+        ("survey", "Survey"),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="feature_usage_events")
+    feature = models.CharField(max_length=30, choices=FEATURE_CHOICES)
+    date = models.DateField(default=timezone.localdate)
+
+    class Meta:
+        unique_together = ("user", "feature", "date")
+        indexes = [models.Index(fields=["feature", "date"])]
+
+    def __str__(self):
+        return f"{self.user}: {self.get_feature_display()} on {self.date}"
 
 
 SURVEY_ELIGIBLE_ACCOUNT_AGE_DAYS = 14

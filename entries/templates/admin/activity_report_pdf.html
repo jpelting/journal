@@ -1,0 +1,59 @@
+<html>
+<head>
+<style>
+  body { font-family: Helvetica, sans-serif; font-size: 11px; color: #222; }
+  h1 { font-size: 16px; margin-bottom: 2px; }
+  h2 { font-size: 13px; margin-top: 22px; margin-bottom: 4px; }
+  p.range { color: #555; margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
+  th { background: #eee; }
+</style>
+</head>
+<body>
+  <h1>The Wax Tablet — Usage Report</h1>
+  <p class="range">{{ report.start_date }} to {{ report.end_date }}</p>
+
+  <h2>Feature usage</h2>
+  <table>
+    <tr><th>Feature</th><th>Count</th></tr>
+    {% for row in report.feature_totals %}
+    <tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>
+    {% empty %}
+    <tr><td colspan="2">No feature usage recorded in this range.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Weekly active users</h2>
+  <table>
+    <tr><th>Week starting</th><th>Active users</th></tr>
+    {% for row in report.weekly_active %}
+    <tr><td>{{ row.week_start }}</td><td>{{ row.active_users }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Daily active users</h2>
+  <table>
+    <tr><th>Date</th><th>Active users</th></tr>
+    {% for row in report.daily_active %}
+    <tr><td>{{ row.date }}</td><td>{{ row.active_users }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Per-user summary</h2>
+  <table>
+    <tr><th>User</th><th>Active days in range</th><th>Events in range</th><th>Lifetime sign-ins</th><th>Last seen</th></tr>
+    {% for row in report.per_user %}
+    <tr>
+      <td>{{ row.username }}</td>
+      <td>{{ row.active_days_in_range }}</td>
+      <td>{{ row.events_in_range }}</td>
+      <td>{{ row.lifetime_sign_ins }}</td>
+      <td>{{ row.last_seen|default:"—" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No activity recorded in this range.</td></tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

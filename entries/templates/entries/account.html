@@ -163,33 +163,54 @@
             }
 
             enableButton.addEventListener('click', function () {
-                statusEl.textContent = 'Enabling...';
-                navigator.serviceWorker.register('/sw.js')
+                enableButton.disabled = true;
+
+                // Request permission first, as directly off the click as possible - on some
+                // mobile browsers the "user gesture" that allows the permission prompt to
+                // appear at all doesn't survive an earlier await (e.g. serviceWorker.register()).
+                statusEl.textContent = 'Requesting notification permission...';
+                Notification.requestPermission()
+                    .then(function (permission) {
+                        if (permission !== 'granted') {
+                            throw new Error(
+                                permission === 'denied'
+                                    ? 'Notifications are blocked for this site - check your browser/site settings and try again.'
+                                    : 'Notification permission was not granted.'
+                            );
+                        }
+                        statusEl.textContent = 'Registering...';
+                        return navigator.serviceWorker.register('/sw.js');
+                    })
                     .then(function (registration) {
-                        return Notification.requestPermission().then(function (permission) {
-                            if (permission !== 'granted') {
-                                throw new Error('Notification permission was not granted.');
-                            }
-                            return registration.pushManager.subscribe({
-                                userVisibleOnly: true,
-                                applicationServerKey: urlBase64ToUint8Array(enableButton.dataset.vapidKey),
-                            });
+                        return registration.active ? registration : navigator.serviceWorker.ready;
+                    })
+                    .then(function (registration) {
+                        statusEl.textContent = 'Subscribing...';
+                        return registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(enableButton.dataset.vapidKey),
                         });
                     })
                     .then(function (subscription) {
+                        statusEl.textContent = 'Saving...';
                         return fetch('{% url "entries:push-subscribe" %}', {
                             method: 'POST',
                             headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
                             body: JSON.stringify(subscription),
+                        }).then(function (response) {
+                            if (!response.ok) throw new Error('Server rejected the subscription (status ' + response.status + ').');
                         });
                     })
-                    .then(function (response) {
-                        if (!response.ok) throw new Error('Could not save subscription.');
+                    .then(function () {
                         statusEl.textContent = 'Notifications enabled on this device.';
                         testButton.hidden = false;
                     })
                     .catch(function (error) {
-                        statusEl.textContent = error.message || 'Could not enable notifications.';
+                        console.error('Push enable failed:', error);
+                        statusEl.textContent = (error && error.message) || 'Could not enable notifications.';
+                    })
+                    .finally(function () {
+                        enableButton.disabled = false;
                     });
             });
 

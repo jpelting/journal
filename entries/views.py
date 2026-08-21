@@ -1,4 +1,6 @@
 import calendar
+import hmac
+import json
 from datetime import date
 from io import BytesIO
 from zoneinfo import ZoneInfo
@@ -10,14 +12,18 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_not_required
 from django.core.mail import send_mail
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
 from xhtml2pdf import pisa
+
+from .push import send_due_notifications, send_to_subscription
 
 from .context_processors import SESSION_KEY as ANNOUNCEMENT_SESSION_KEY
 from .forms import (
@@ -31,6 +37,7 @@ from .forms import (
     GoalFormSet,
     MomentCheckInForm,
     MorningCheckInForm,
+    NotificationSettingsForm,
     SurveyForm,
 )
 from .models import (
@@ -40,8 +47,10 @@ from .models import (
     Feedback,
     IntrospectionPrompt,
     MomentCheckIn,
+    MotivationalQuote,
     Prayer,
     Profile,
+    PushSubscription,
     StoicPrompt,
     SurveyResponse,
 )
@@ -141,9 +150,20 @@ def access_request_reject_view(request, token):
 
 def account_view(request):
     profile = getattr(request.user, "profile", None) or Profile(user=request.user)
-    if request.method == "POST":
+    submitted_form = request.POST.get("form") if request.method == "POST" else None
+
+    if submitted_form == "notifications":
+        notification_form = NotificationSettingsForm(request.POST, instance=profile)
+        if notification_form.is_valid():
+            notification_form.save()
+            messages.success(request, "Your notification settings have been updated.")
+            return redirect("entries:account")
+        user_form = AccountUserForm(instance=request.user)
+        profile_form = AccountProfileForm(instance=profile)
+    elif submitted_form == "account":
         user_form = AccountUserForm(request.POST, instance=request.user)
         profile_form = AccountProfileForm(request.POST, instance=profile)
+        notification_form = NotificationSettingsForm(instance=profile)
         if user_form.is_valid() and profile_form.is_valid():
             user_form.save()
             profile_form.save()
@@ -152,7 +172,73 @@ def account_view(request):
     else:
         user_form = AccountUserForm(instance=request.user)
         profile_form = AccountProfileForm(instance=profile)
-    return render(request, "entries/account.html", {"user_form": user_form, "profile_form": profile_form})
+        notification_form = NotificationSettingsForm(instance=profile)
+
+    return render(
+        request,
+        "entries/account.html",
+        {
+            "user_form": user_form,
+            "profile_form": profile_form,
+            "notification_form": notification_form,
+            "vapid_public_key": settings.VAPID_PUBLIC_KEY,
+        },
+    )
+
+
+@require_POST
+def push_subscribe_view(request):
+    """Creates/updates a PushSubscription for the signed-in user from the browser's
+    PushManager.subscribe() result, posted as JSON by the "Enable notifications on this
+    device" button on the account page."""
+    try:
+        data = json.loads(request.body)
+        endpoint = data["endpoint"]
+        p256dh = data["keys"]["p256dh"]
+        auth = data["keys"]["auth"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return HttpResponse(status=400)
+
+    PushSubscription.objects.update_or_create(
+        endpoint=endpoint, defaults={"user": request.user, "p256dh": p256dh, "auth": auth}
+    )
+    return JsonResponse({"ok": True})
+
+
+@require_POST
+def push_test_view(request):
+    """Sends an immediate test push to every one of the signed-in user's subscriptions, so
+    they can confirm delivery works right after opting in rather than waiting for the next
+    scheduled morning/evening slot."""
+    subscriptions = list(request.user.push_subscriptions.all())
+    if not subscriptions:
+        return JsonResponse({"ok": False, "error": "No subscription registered on this device yet."}, status=400)
+    for subscription in subscriptions:
+        send_to_subscription(subscription, "The Wax Tablet", "Test notification — push is working!")
+    return JsonResponse({"ok": True})
+
+
+@csrf_exempt
+@login_not_required
+@require_POST
+def send_due_notifications_view(request):
+    """Cron target: POST /internal/send-due-quote-notifications/, hit every few minutes by
+    the GitHub Actions workflow (see .github/workflows/send-quote-notifications.yml) since
+    this app has no in-process scheduler and the Fly machine auto-stops when idle. Not a
+    Django-session endpoint - authenticated by a shared secret instead."""
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip()
+    if not token or not hmac.compare_digest(token, settings.CRON_SECRET):
+        return HttpResponseForbidden()
+    sent = send_due_notifications()
+    return JsonResponse({"sent": sent})
+
+
+@login_not_required
+def service_worker_view(request):
+    """Serves the service worker JS at the origin root (not under /static/) so its default
+    scope is "/" and it can receive push events regardless of which page is open."""
+    return render(request, "entries/sw.js", content_type="application/javascript")
 
 
 def account_delete_view(request):
@@ -484,6 +570,18 @@ def _today_entry(user):
     return entry
 
 
+def _daily_quote_for(user, slot):
+    """The day's motivational quote for a check-in slot, or None if the user hasn't opted in
+    to that slot (master toggle + morning/evening toggle both required)."""
+    profile = getattr(user, "profile", None)
+    if not profile or not profile.quotes_enabled:
+        return None
+    enabled = profile.quote_morning_enabled if slot == 1 else profile.quote_evening_enabled
+    if not enabled:
+        return None
+    return MotivationalQuote.for_date(timezone.localdate(), slot=slot)
+
+
 def _checkin_availability(now):
     """Morning check-in runs 12:01am-12:00pm; evening follow-up is the complement
     (12:01pm-12:00am), so the two windows never overlap and never gap."""
@@ -546,6 +644,7 @@ def checkin_morning_view(request):
             "weather_location": location_name,
             "weather_animation": weather_animation_for_summary(entry.weather_summary),
             "today_prayer": Prayer.for_date(timezone.localdate()),
+            "daily_quote": _daily_quote_for(request.user, slot=1),
             "show_entry_saved_modal": request.GET.get("saved") == "1",
             "entry_saved_label": "morning check-in",
         },
@@ -595,6 +694,7 @@ def checkin_evening_view(request):
             "weather_location": location_name,
             "forecast_animation": weather_animation_for_summary(entry.forecast_summary),
             "today_prayer": Prayer.for_date(timezone.localdate()),
+            "daily_quote": _daily_quote_for(request.user, slot=2),
             "show_entry_saved_modal": request.GET.get("saved") == "1",
             "entry_saved_label": "evening check-in",
         },

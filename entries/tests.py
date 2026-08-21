@@ -1,13 +1,18 @@
-from datetime import date
+import json
+from datetime import date, datetime, time
+from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 from cryptography.fernet import Fernet
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import IntegrityError, connection, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Entry, MomentCheckIn, StoicPrompt
+from .models import Entry, MomentCheckIn, MotivationalQuote, Profile, PushSubscription, StoicPrompt
+from .push import send_due_notifications
 from .views import _next_stoic_prompt, _today_entry
 
 
@@ -206,3 +211,98 @@ class FieldEncryptionTests(TestCase):
         counter = getattr(self, "_user_counter", 0) + 1
         self._user_counter = counter
         return User.objects.create_user(username=f"crypto-user-{counter}", password="pw12345", **kwargs)
+
+
+class PushNotificationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="quote-fan", password="pw12345")
+        self.profile = Profile.objects.create(
+            user=self.user,
+            name="Quote Fan",
+            date_of_birth=date(1990, 1, 1),
+            gender="prefer_not_to_say",
+            zipcode="28115",
+            quotes_enabled=True,
+            quote_morning_enabled=True,
+            quote_morning_time=time(7, 0),
+            quote_evening_enabled=False,
+        )
+        self.subscription = PushSubscription.objects.create(
+            user=self.user, endpoint="https://push.example.com/abc", p256dh="pkey", auth="akey"
+        )
+        MotivationalQuote.objects.create(day_of_year=1, slot=1, text="Quote of the day.", author="Someone")
+
+    def _fake_now(self, hour, minute):
+        return datetime(2030, 1, 1, hour, minute, tzinfo=ZoneInfo("UTC"))
+
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_sends_once_inside_window_and_not_again_same_day(self, mock_location, mock_send):
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        with patch("django.utils.timezone.now", return_value=self._fake_now(7, 2)):
+            sent = send_due_notifications()
+        self.assertEqual(sent, 1)
+        mock_send.assert_called_once()
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.last_morning_quote_sent_date, date(2030, 1, 1))
+
+        mock_send.reset_mock()
+        with patch("django.utils.timezone.now", return_value=self._fake_now(7, 4)):
+            sent_again = send_due_notifications()
+        self.assertEqual(sent_again, 0)
+        mock_send.assert_not_called()
+
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_does_not_send_outside_window(self, mock_location, mock_send):
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        with patch("django.utils.timezone.now", return_value=self._fake_now(9, 0)):
+            sent = send_due_notifications()
+        self.assertEqual(sent, 0)
+        mock_send.assert_not_called()
+
+    def test_push_subscribe_requires_login(self):
+        response = self.client.post(
+            reverse("entries:push-subscribe"),
+            data=json.dumps({"endpoint": "https://push.example.com/new", "keys": {"p256dh": "a", "auth": "b"}}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_push_subscribe_creates_subscription(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("entries:push-subscribe"),
+            data=json.dumps({"endpoint": "https://push.example.com/new", "keys": {"p256dh": "a", "auth": "b"}}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(PushSubscription.objects.filter(endpoint="https://push.example.com/new", user=self.user).exists())
+
+    def test_push_subscribe_rejects_malformed_payload(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("entries:push-subscribe"), data="not json", content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_cron_endpoint_rejects_missing_or_wrong_secret(self):
+        response = self.client.post(reverse("entries:send-due-quote-notifications"))
+        self.assertEqual(response.status_code, 403)
+
+        response = self.client.post(
+            reverse("entries:send-due-quote-notifications"), HTTP_AUTHORIZATION="Bearer wrong-token"
+        )
+        self.assertEqual(response.status_code, 403)
+
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_cron_endpoint_accepts_correct_secret(self, mock_location, mock_send):
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        with patch("django.utils.timezone.now", return_value=self._fake_now(7, 2)):
+            response = self.client.post(
+                reverse("entries:send-due-quote-notifications"),
+                HTTP_AUTHORIZATION=f"Bearer {settings.CRON_SECRET}",
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["sent"], 1)

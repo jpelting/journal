@@ -1,9 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}The Wax Tablet{% endblock %}</title>
+    <link rel="manifest" href="{% static 'entries/manifest.webmanifest' %}">
+    <link rel="icon" href="{% static 'entries/icons/icon-192.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'entries/icons/icon-192.png' %}">
+    <meta name="theme-color" content="#1a1a1a">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -171,6 +176,9 @@
         }
         .prompt { font-style: italic; color: var(--accent); margin-top: 0.25rem; }
         .helptext { font-size: 0.85rem; color: var(--text-muted); }
+        .daily-quote { text-align: center; }
+        .daily-quote-text { font-family: 'Cinzel', serif; font-size: 1.15rem; font-style: italic; color: var(--text); margin: 0 0 0.5rem; }
+        .daily-quote-author { font-size: 0.9rem; color: var(--accent); margin: 0; }
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 0.5rem; }
         .calendar-nav a { font-size: 1.1rem; padding: 0.3rem 0.6rem; }
         .calendar-scroll { overflow-x: auto; }
@@ -624,5 +632,12 @@
         });
     </script>
     {% include "entries/_strip_email_spaces.html" %}
+    {% if user.is_authenticated %}
+        <script>
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js');
+            }
+        </script>
+    {% endif %}
 </body>
 </html>

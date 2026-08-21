@@ -23,6 +23,14 @@ urlpatterns = [
     path("announcements/dismiss/", views.dismiss_announcements_view, name="dismiss-announcements"),
     path("survey/", views.survey_view, name="survey"),
     path("survey/decline/", views.survey_decline_view, name="survey-decline"),
+    path("sw.js", views.service_worker_view, name="service-worker"),
+    path("push/subscribe/", views.push_subscribe_view, name="push-subscribe"),
+    path("push/test/", views.push_test_view, name="push-test"),
+    path(
+        "internal/send-due-quote-notifications/",
+        views.send_due_notifications_view,
+        name="send-due-quote-notifications",
+    ),
     path("<int:pk>/", views.EntryDetailView.as_view(), name="detail"),
     path("<int:pk>/edit/", views.EntryUpdateView.as_view(), name="edit"),
 ]

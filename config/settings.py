@@ -234,3 +234,35 @@ if not DEBUG and _DEV_FIELD_ENCRYPTION_KEY in FIELD_ENCRYPTION_KEYS:
 YVP_APP_KEY = os.environ.get('YVP_APP_KEY', '')
 BIBLE_VERSION_ID = '111'  # NIV, used only for the optional live-fetch fallback above
 BIBLE_VERSION_ATTRIBUTION = "King James Version (KJV), public domain."
+
+
+# Web Push (optional daily motivational quote notifications, opted into per-user on the
+# account page - see entries/push.py). VAPID identifies this app to push services; unlike
+# DJANGO_SECRET_KEY/FIELD_ENCRYPTION_KEYS it doesn't protect any user data, so the dev-only
+# default below is harmless to run production on (though a distinct prod pair is still
+# recommended). Generate a real pair with:
+#   uv run python -c "
+#   from py_vapid import Vapid
+#   from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
+#   import base64
+#   v = Vapid(); v.generate_keys()
+#   pub = v.public_key.public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
+#   priv = v.private_key.private_bytes(Encoding.DER, PrivateFormat.PKCS8, NoEncryption())
+#   print('VAPID_PUBLIC_KEY=' + base64.urlsafe_b64encode(pub).decode().rstrip('='))
+#   print('VAPID_PRIVATE_KEY=' + base64.urlsafe_b64encode(priv).decode().rstrip('='))
+#   "
+_DEV_VAPID_PUBLIC_KEY = 'BM76VQxrfHBNrYjMni4k6bStePbZMHW-cztGkg66gepvcIk9E5kbZUrDPc95_2wbouzxQQKMXNH4b7oL5hVNJyU'
+_DEV_VAPID_PRIVATE_KEY = (
+    'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg7nG4mamMMEswbL5MwvBW0aLqVP2aEYZ4ENtRxH6JQH6h'
+    'RANCAATO-lUMa3xwTa2IzJ4uJOm0rXj22TB1vnM7RpIOuoHqb3CJPROZG2VKwz3Pef9sG6Ls8UECjFzR-G-6C-YVTScl'
+)
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', _DEV_VAPID_PUBLIC_KEY)
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', _DEV_VAPID_PRIVATE_KEY)
+VAPID_CLAIM_EMAIL = os.environ.get('VAPID_CLAIM_EMAIL', f'mailto:{ADMIN_EMAIL}')
+
+# Shared secret the GitHub Actions cron workflow presents (as `Authorization: Bearer <token>`)
+# to POST /internal/send-due-quote-notifications/, since that endpoint can't be gated by a
+# Django login - it's hit by a scheduled job, not a signed-in user. Dev default is fine locally;
+# MUST be overridden in production (set as both a Fly secret and a GitHub Actions secret) or
+# anyone who finds the endpoint could trigger notification sends.
+CRON_SECRET = os.environ.get('CRON_SECRET', 'dev-only-cron-secret')

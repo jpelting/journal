@@ -265,6 +265,22 @@ class AccountProfileForm(forms.ModelForm):
         return cleaned_data
 
 
+class NotificationSettingsForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = (
+            "quotes_enabled",
+            "quote_morning_enabled",
+            "quote_morning_time",
+            "quote_evening_enabled",
+            "quote_evening_time",
+        )
+        widgets = {
+            "quote_morning_time": forms.TimeInput(attrs={"type": "time"}),
+            "quote_evening_time": forms.TimeInput(attrs={"type": "time"}),
+        }
+
+
 class SurveyForm(forms.ModelForm):
     class Meta:
         model = SurveyResponse

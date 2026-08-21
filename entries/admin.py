@@ -25,8 +25,10 @@ from .models import (
     IntrospectionPrompt,
     LoginCount,
     MomentCheckIn,
+    MotivationalQuote,
     Prayer,
     Profile,
+    PushSubscription,
     StoicPractice,
     StoicPrompt,
     SurveyResponse,
@@ -289,6 +291,22 @@ class PrayerAdmin(admin.ModelAdmin):
 class StoicPracticeAdmin(admin.ModelAdmin):
     list_display = ["week_number", "part", "title"]
     ordering = ["week_number"]
+
+
+@admin.register(MotivationalQuote)
+class MotivationalQuoteAdmin(admin.ModelAdmin):
+    list_display = ["day_of_year", "slot", "author", "__str__"]
+    list_filter = ["slot"]
+    search_fields = ["text", "author"]
+    ordering = ["day_of_year", "slot"]
+
+
+@admin.register(PushSubscription)
+class PushSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ["user", "endpoint", "created_at"]
+    list_filter = ["user"]
+    readonly_fields = ["endpoint", "p256dh", "auth", "created_at"]
+    ordering = ["-created_at"]
 
 
 @admin.register(Profile)

@@ -1,4 +1,5 @@
 import uuid
+from datetime import time
 
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -106,6 +107,29 @@ class StoicPractice(models.Model):
     def for_date(cls, d):
         week = min(d.isocalendar()[1], 52)  # ISO week 53 (rare) reuses week 52's practice
         return cls.objects.filter(week_number=week).first()
+
+
+class MotivationalQuote(models.Model):
+    SLOT_CHOICES = [(1, "Morning"), (2, "Evening")]
+
+    day_of_year = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(365)])
+    slot = models.PositiveSmallIntegerField(choices=SLOT_CHOICES, default=1)
+    text = models.TextField()
+    author = models.CharField(max_length=200)
+
+    class Meta:
+        ordering = ["day_of_year", "slot"]
+        constraints = [
+            models.UniqueConstraint(fields=["day_of_year", "slot"], name="unique_motivational_quote_day_slot")
+        ]
+
+    def __str__(self):
+        return f"Day {self.day_of_year} ({self.get_slot_display()}): {self.text[:50]}"
+
+    @classmethod
+    def for_date(cls, d, slot=1):
+        day = min(d.timetuple().tm_yday, 365)  # leap-day 366 reuses day 365, same convention as IntrospectionPrompt/StoicPractice
+        return cls.objects.filter(day_of_year=day, slot=slot).first()
 
 
 class Entry(models.Model):
@@ -252,6 +276,18 @@ class Profile(models.Model):
         null=True, blank=True, help_text="When this user last dismissed the What's New popup."
     )
 
+    quotes_enabled = models.BooleanField(
+        default=False, help_text="Master opt-in for daily motivational quotes (desktop display and/or mobile push)."
+    )
+    quote_morning_enabled = models.BooleanField(default=False)
+    quote_morning_time = models.TimeField(default=time(7, 0))
+    quote_evening_enabled = models.BooleanField(default=False)
+    quote_evening_time = models.TimeField(default=time(20, 0))
+    last_morning_quote_sent_date = models.DateField(
+        null=True, blank=True, help_text="Dedupes push sends within the same day across cron ticks."
+    )
+    last_evening_quote_sent_date = models.DateField(null=True, blank=True)
+
     def __str__(self):
         return self.name
 
@@ -260,6 +296,24 @@ class Profile(models.Model):
         today = timezone.localdate()
         dob = self.date_of_birth
         return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+
+class PushSubscription(models.Model):
+    """One browser/device's Web Push subscription, from the PWA's push opt-in on the account page.
+
+    A user can have more than one (phone + tablet, etc.) - each is delivered to independently.
+    Pruned automatically (see entries.push.send_to_subscription) when the push service reports
+    the endpoint as expired/invalid.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="push_subscriptions")
+    endpoint = models.URLField(max_length=500, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} - {self.endpoint[:60]}"
 
 
 class AccessRequest(models.Model):

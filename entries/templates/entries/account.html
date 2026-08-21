@@ -7,6 +7,7 @@
 
     <form method="post" novalidate>
         {% csrf_token %}
+        <input type="hidden" name="form" value="account">
 
         <section class="part">
             <h2>Login details</h2>
@@ -50,6 +51,50 @@
         <p class="form-actions"><button class="btn" type="submit">Save changes</button></p>
     </form>
 
+    <form method="post" novalidate id="notifications-form">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="notifications">
+
+        <section class="part">
+            <h2>Daily Motivational Quotes</h2>
+            {{ notification_form.non_field_errors }}
+            <label>
+                {{ notification_form.quotes_enabled }}
+                Send me daily motivational quotes
+            </label>
+            <p class="helptext">On desktop these show on your Morning Check-in / Evening Follow-up pages. On mobile, install this site to your phone's home screen below to get them as push notifications instead.</p>
+
+            <div id="quote-schedule-rows">
+                <label>
+                    {{ notification_form.quote_morning_enabled }}
+                    Morning
+                </label>
+                {{ notification_form.quote_morning_time }}
+                {{ notification_form.quote_morning_time.errors }}
+
+                <label>
+                    {{ notification_form.quote_evening_enabled }}
+                    Evening
+                </label>
+                {{ notification_form.quote_evening_time }}
+                {{ notification_form.quote_evening_time.errors }}
+            </div>
+        </section>
+
+        <section class="part">
+            <h2>Push notifications on this device</h2>
+            <p class="helptext">To get your quotes as phone notifications: add this site to your home screen (your browser's "Add to Home Screen" / "Install app" option), open it from there, then tap below.</p>
+            <p class="form-actions">
+                <button type="button" class="btn" id="enable-push-button" data-vapid-key="{{ vapid_public_key }}">Enable notifications on this device</button>
+                <button type="button" class="btn" id="test-push-button" hidden>Send test notification</button>
+            </p>
+            <p class="helptext" id="push-status"></p>
+            <p class="helptext" id="push-not-supported" hidden>Push notifications aren't supported in this browser.</p>
+        </section>
+
+        <p class="form-actions"><button class="btn" type="submit">Save notification settings</button></p>
+    </form>
+
     <section class="part danger-zone">
         <h2>Danger Zone</h2>
         <p class="helptext">Permanently delete your account and everything in it &mdash; every journal entry, check-in, and moment logged.</p>
@@ -81,6 +126,88 @@
         }
         genderSelect.addEventListener('change', syncSelfDescribeVisibility);
         syncSelfDescribeVisibility();
+
+        (function () {
+            var quotesEnabled = document.getElementById('{{ notification_form.quotes_enabled.id_for_label }}');
+            var scheduleRows = document.getElementById('quote-schedule-rows');
+
+            function syncScheduleVisibility() {
+                scheduleRows.style.display = quotesEnabled.checked ? 'block' : 'none';
+            }
+            quotesEnabled.addEventListener('change', syncScheduleVisibility);
+            syncScheduleVisibility();
+        })();
+
+        (function () {
+            var enableButton = document.getElementById('enable-push-button');
+            var testButton = document.getElementById('test-push-button');
+            var statusEl = document.getElementById('push-status');
+            var notSupportedEl = document.getElementById('push-not-supported');
+            var csrfToken = document.querySelector('#notifications-form [name=csrfmiddlewaretoken]').value;
+
+            if (!('serviceWorker' in navigator) || !('PushManager' in navigator)) {
+                enableButton.hidden = true;
+                notSupportedEl.hidden = false;
+                return;
+            }
+
+            function urlBase64ToUint8Array(base64String) {
+                var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+                var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                var rawData = window.atob(base64);
+                var outputArray = new Uint8Array(rawData.length);
+                for (var i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            }
+
+            enableButton.addEventListener('click', function () {
+                statusEl.textContent = 'Enabling...';
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function (registration) {
+                        return Notification.requestPermission().then(function (permission) {
+                            if (permission !== 'granted') {
+                                throw new Error('Notification permission was not granted.');
+                            }
+                            return registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: urlBase64ToUint8Array(enableButton.dataset.vapidKey),
+                            });
+                        });
+                    })
+                    .then(function (subscription) {
+                        return fetch('{% url "entries:push-subscribe" %}', {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+                            body: JSON.stringify(subscription),
+                        });
+                    })
+                    .then(function (response) {
+                        if (!response.ok) throw new Error('Could not save subscription.');
+                        statusEl.textContent = 'Notifications enabled on this device.';
+                        testButton.hidden = false;
+                    })
+                    .catch(function (error) {
+                        statusEl.textContent = error.message || 'Could not enable notifications.';
+                    });
+            });
+
+            testButton.addEventListener('click', function () {
+                statusEl.textContent = 'Sending test notification...';
+                fetch('{% url "entries:push-test" %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        statusEl.textContent = data.ok ? 'Test notification sent.' : (data.error || 'Could not send test notification.');
+                    })
+                    .catch(function () {
+                        statusEl.textContent = 'Could not send test notification.';
+                    });
+            });
+        })();
 
         (function () {
             var backdrop = document.getElementById('delete-modal-backdrop');

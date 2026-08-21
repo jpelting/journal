@@ -186,11 +186,21 @@ def account_view(request):
     )
 
 
+@csrf_exempt
 @require_POST
 def push_subscribe_view(request):
     """Creates/updates a PushSubscription for the signed-in user from the browser's
     PushManager.subscribe() result, posted as JSON by the "Enable notifications on this
-    device" button on the account page."""
+    device" button on the account page.
+
+    CSRF-exempt (still login-required via LoginRequiredMiddleware): this is the app's first
+    fetch()-based POST, and Django's CSRF protection strictly requires a Referer header on
+    HTTPS requests - installed PWAs on Android (running as a Trusted Web Activity) are known
+    to sometimes omit/alter it in ways a normal tab doesn't, which 403'd this endpoint for
+    real users. Worst case of exempting it is low-severity (an attacker CSRFing a signed-in
+    user into pointing their quote notifications at another device), not account compromise
+    or data exposure.
+    """
     try:
         data = json.loads(request.body)
         endpoint = data["endpoint"]
@@ -205,11 +215,12 @@ def push_subscribe_view(request):
     return JsonResponse({"ok": True})
 
 
+@csrf_exempt
 @require_POST
 def push_test_view(request):
     """Sends an immediate test push to every one of the signed-in user's subscriptions, so
     they can confirm delivery works right after opting in rather than waiting for the next
-    scheduled morning/evening slot."""
+    scheduled morning/evening slot. CSRF-exempt for the same reason as push_subscribe_view."""
     subscriptions = list(request.user.push_subscriptions.all())
     if not subscriptions:
         return JsonResponse({"ok": False, "error": "No subscription registered on this device yet."}, status=400)

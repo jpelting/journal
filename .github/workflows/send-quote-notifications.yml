@@ -11,5 +11,5 @@ jobs:
     steps:
       - name: Trigger send-due-quote-notifications
         run: |
-          curl -fsS -X POST "https://thewaxtablet.com/internal/send-due-quote-notifications/" \
+          curl -fsS -X POST "https://www.thewaxtablet.com/internal/send-due-quote-notifications/" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

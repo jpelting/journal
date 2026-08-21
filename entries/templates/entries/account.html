@@ -145,8 +145,13 @@
             var notSupportedEl = document.getElementById('push-not-supported');
             var csrfToken = document.querySelector('#notifications-form [name=csrfmiddlewaretoken]').value;
 
-            if (!('serviceWorker' in navigator) || !('PushManager' in navigator)) {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
                 enableButton.hidden = true;
+                var reasons = [];
+                if (!window.isSecureContext) reasons.push('page is not a secure context (isSecureContext=false)');
+                if (!('serviceWorker' in navigator)) reasons.push('navigator.serviceWorker is missing');
+                if (!('PushManager' in window)) reasons.push('window.PushManager is missing');
+                notSupportedEl.textContent = "Push notifications aren't supported in this browser (" + reasons.join('; ') + '). User agent: ' + navigator.userAgent;
                 notSupportedEl.hidden = false;
                 return;
             }

@@ -42,6 +42,9 @@ def survey_prompt(request):
     if not request.user.is_authenticated:
         return {}
 
+    if request.resolver_match and request.resolver_match.url_name == "survey":
+        return {}
+
     account_age_days = (timezone.localdate() - request.user.date_joined.date()).days
     if account_age_days < SURVEY_ELIGIBLE_ACCOUNT_AGE_DAYS:
         return {}

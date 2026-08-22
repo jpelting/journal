@@ -46,7 +46,15 @@ class ScoreSliderMinFixMixin:
     clobbers the widget's min=1 attrs at field-construction time — so the
     rendered slider lets you drag to 0 even though the model validators
     (SCORE_VALIDATORS) require >=1, causing a silent whole-form validation
-    failure. Force min back to 1 on each bound field instance."""
+    failure. Force min back to 1 on each bound field instance.
+
+    Also default a score's initial value to 5 when the underlying field is
+    still unset (a fresh Entry). Without this, no value="" attribute gets
+    rendered on the <input type="range"> at all, so the browser falls back
+    to its own default-value algorithm - the midpoint of min/max snapped to
+    the step, i.e. 6 for min=1/max=10 - while the checkin templates'
+    "{{ field.value|default:5 }}" label still shows 5, so the number next
+    to the slider doesn't match where its thumb actually sits."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,6 +62,8 @@ class ScoreSliderMinFixMixin:
             if name in self.fields:
                 self.fields[name].min_value = 1
                 self.fields[name].widget.attrs["min"] = 1
+                if self.initial.get(name) is None:
+                    self.initial[name] = 5
 
 
 class EntryForm(ScopedEntrySaveMixin, forms.ModelForm):

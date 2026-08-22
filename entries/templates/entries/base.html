@@ -631,6 +631,15 @@
             });
         });
     </script>
+    <script>
+        document.querySelectorAll('input.slider').forEach(function (slider) {
+            var output = document.querySelector('output[for="' + slider.id + '"]');
+            if (!output) return;
+            slider.addEventListener('input', function () {
+                output.textContent = slider.value;
+            });
+        });
+    </script>
     {% include "entries/_strip_email_spaces.html" %}
     {% if user.is_authenticated %}
         <script>

@@ -132,6 +132,28 @@ class MotivationalQuote(models.Model):
         return cls.objects.filter(day_of_year=day, slot=slot).first()
 
 
+class SelfAffirmation(models.Model):
+    SLOT_CHOICES = [(1, "Morning"), (2, "Evening")]
+
+    day_of_year = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(365)])
+    slot = models.PositiveSmallIntegerField(choices=SLOT_CHOICES, default=1)
+    text = models.TextField()
+
+    class Meta:
+        ordering = ["day_of_year", "slot"]
+        constraints = [
+            models.UniqueConstraint(fields=["day_of_year", "slot"], name="unique_self_affirmation_day_slot")
+        ]
+
+    def __str__(self):
+        return f"Day {self.day_of_year} ({self.get_slot_display()}): {self.text[:50]}"
+
+    @classmethod
+    def for_date(cls, d, slot=1):
+        day = min(d.timetuple().tm_yday, 365)  # leap-day 366 reuses day 365, same convention as MotivationalQuote
+        return cls.objects.filter(day_of_year=day, slot=slot).first()
+
+
 class Entry(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="entries")
     date = models.DateField(default=timezone.localdate)
@@ -287,6 +309,18 @@ class Profile(models.Model):
         null=True, blank=True, help_text="Dedupes push sends within the same day across cron ticks."
     )
     last_evening_quote_sent_date = models.DateField(null=True, blank=True)
+
+    affirmations_enabled = models.BooleanField(
+        default=False, help_text="Master opt-in for daily self-affirmations (desktop display and/or mobile push)."
+    )
+    affirmation_morning_enabled = models.BooleanField(default=False)
+    affirmation_morning_time = models.TimeField(default=time(7, 0))
+    affirmation_evening_enabled = models.BooleanField(default=False)
+    affirmation_evening_time = models.TimeField(default=time(20, 0))
+    last_morning_affirmation_sent_date = models.DateField(
+        null=True, blank=True, help_text="Dedupes push sends within the same day across cron ticks."
+    )
+    last_evening_affirmation_sent_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return self.name

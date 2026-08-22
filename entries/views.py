@@ -51,6 +51,7 @@ from .models import (
     Prayer,
     Profile,
     PushSubscription,
+    SelfAffirmation,
     StoicPrompt,
     SurveyResponse,
 )
@@ -593,6 +594,18 @@ def _daily_quote_for(user, slot):
     return MotivationalQuote.for_date(timezone.localdate(), slot=slot)
 
 
+def _daily_affirmation_for(user, slot):
+    """The day's self-affirmation for a check-in slot, or None if the user hasn't opted in
+    to that slot (master toggle + morning/evening toggle both required)."""
+    profile = getattr(user, "profile", None)
+    if not profile or not profile.affirmations_enabled:
+        return None
+    enabled = profile.affirmation_morning_enabled if slot == 1 else profile.affirmation_evening_enabled
+    if not enabled:
+        return None
+    return SelfAffirmation.for_date(timezone.localdate(), slot=slot)
+
+
 def _checkin_availability(now):
     """Morning check-in runs 12:01am-12:00pm; evening follow-up is the complement
     (12:01pm-12:00am), so the two windows never overlap and never gap."""
@@ -656,6 +669,7 @@ def checkin_morning_view(request):
             "weather_animation": weather_animation_for_summary(entry.weather_summary),
             "today_prayer": Prayer.for_date(timezone.localdate()),
             "daily_quote": _daily_quote_for(request.user, slot=1),
+            "daily_affirmation": _daily_affirmation_for(request.user, slot=1),
             "show_entry_saved_modal": request.GET.get("saved") == "1",
             "entry_saved_label": "morning check-in",
         },
@@ -706,6 +720,7 @@ def checkin_evening_view(request):
             "forecast_animation": weather_animation_for_summary(entry.forecast_summary),
             "today_prayer": Prayer.for_date(timezone.localdate()),
             "daily_quote": _daily_quote_for(request.user, slot=2),
+            "daily_affirmation": _daily_affirmation_for(request.user, slot=2),
             "show_entry_saved_modal": request.GET.get("saved") == "1",
             "entry_saved_label": "evening check-in",
         },

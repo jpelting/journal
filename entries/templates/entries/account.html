@@ -82,8 +82,33 @@
         </section>
 
         <section class="part">
+            <h2>Daily Self-Affirmations</h2>
+            <label>
+                {{ notification_form.affirmations_enabled }}
+                Send me daily self-affirmations
+            </label>
+            <p class="helptext">On desktop these show on your Morning Check-in / Evening Follow-up pages. On mobile, install this site to your phone's home screen below to get them as push notifications instead.</p>
+
+            <div id="affirmation-schedule-rows">
+                <label>
+                    {{ notification_form.affirmation_morning_enabled }}
+                    Morning
+                </label>
+                {{ notification_form.affirmation_morning_time }}
+                {{ notification_form.affirmation_morning_time.errors }}
+
+                <label>
+                    {{ notification_form.affirmation_evening_enabled }}
+                    Evening
+                </label>
+                {{ notification_form.affirmation_evening_time }}
+                {{ notification_form.affirmation_evening_time.errors }}
+            </div>
+        </section>
+
+        <section class="part">
             <h2>Push notifications on this device</h2>
-            <p class="helptext">To get your quotes as phone notifications: add this site to your home screen (your browser's "Add to Home Screen" / "Install app" option), open it from there, then tap below.</p>
+            <p class="helptext">To get your quotes and affirmations as phone notifications: add this site to your home screen (your browser's "Add to Home Screen" / "Install app" option), open it from there, then tap below.</p>
             <p class="form-actions">
                 <button type="button" class="btn" id="enable-push-button" data-vapid-key="{{ vapid_public_key }}">Enable notifications on this device</button>
                 <button type="button" class="btn" id="test-push-button" hidden>Send test notification</button>
@@ -135,6 +160,17 @@
                 scheduleRows.style.display = quotesEnabled.checked ? 'block' : 'none';
             }
             quotesEnabled.addEventListener('change', syncScheduleVisibility);
+            syncScheduleVisibility();
+        })();
+
+        (function () {
+            var affirmationsEnabled = document.getElementById('{{ notification_form.affirmations_enabled.id_for_label }}');
+            var scheduleRows = document.getElementById('affirmation-schedule-rows');
+
+            function syncScheduleVisibility() {
+                scheduleRows.style.display = affirmationsEnabled.checked ? 'block' : 'none';
+            }
+            affirmationsEnabled.addEventListener('change', syncScheduleVisibility);
             syncScheduleVisibility();
         })();
 

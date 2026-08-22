@@ -29,6 +29,7 @@ from .models import (
     Prayer,
     Profile,
     PushSubscription,
+    SelfAffirmation,
     StoicPractice,
     StoicPrompt,
     SurveyResponse,
@@ -298,6 +299,14 @@ class MotivationalQuoteAdmin(admin.ModelAdmin):
     list_display = ["day_of_year", "slot", "author", "__str__"]
     list_filter = ["slot"]
     search_fields = ["text", "author"]
+    ordering = ["day_of_year", "slot"]
+
+
+@admin.register(SelfAffirmation)
+class SelfAffirmationAdmin(admin.ModelAdmin):
+    list_display = ["day_of_year", "slot", "__str__"]
+    list_filter = ["slot"]
+    search_fields = ["text"]
     ordering = ["day_of_year", "slot"]
 
 

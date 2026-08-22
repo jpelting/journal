@@ -11,7 +11,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Entry, MomentCheckIn, MotivationalQuote, Profile, PushSubscription, StoicPrompt
+from .models import Entry, MomentCheckIn, MotivationalQuote, Profile, PushSubscription, SelfAffirmation, StoicPrompt
 from .push import send_due_notifications
 from .views import _next_stoic_prompt, _today_entry
 
@@ -237,7 +237,7 @@ class PushNotificationTests(TestCase):
 
     @patch("entries.push.send_to_subscription")
     @patch("entries.push.weather_location_for_user")
-    def test_sends_once_inside_window_and_not_again_same_day(self, mock_location, mock_send):
+    def test_sends_once_at_quote_time_and_not_again_same_day(self, mock_location, mock_send):
         mock_location.return_value = (0, 0, "Nowhere", "UTC")
         with patch("django.utils.timezone.now", return_value=self._fake_now(7, 2)):
             sent = send_due_notifications()
@@ -254,12 +254,58 @@ class PushNotificationTests(TestCase):
 
     @patch("entries.push.send_to_subscription")
     @patch("entries.push.weather_location_for_user")
-    def test_does_not_send_outside_window(self, mock_location, mock_send):
+    def test_does_not_send_before_quote_time(self, mock_location, mock_send):
         mock_location.return_value = (0, 0, "Nowhere", "UTC")
-        with patch("django.utils.timezone.now", return_value=self._fake_now(9, 0)):
+        with patch("django.utils.timezone.now", return_value=self._fake_now(6, 59)):
             sent = send_due_notifications()
         self.assertEqual(sent, 0)
         mock_send.assert_not_called()
+
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_sends_on_a_late_tick_if_still_unsent_for_today(self, mock_location, mock_send):
+        # The sender is ticked by a GitHub Actions cron that isn't guaranteed to run every
+        # 5 minutes - it commonly gets delayed 20-50+ minutes under load, which can (and did)
+        # skip a narrow send window outright. A late tick should still deliver that day's
+        # quote rather than silently drop it, as long as nothing's gone out yet today.
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        with patch("django.utils.timezone.now", return_value=self._fake_now(9, 0)):
+            sent = send_due_notifications()
+        self.assertEqual(sent, 1)
+        mock_send.assert_called_once()
+
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_sends_affirmation_independently_of_quotes(self, mock_location, mock_send):
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        SelfAffirmation.objects.create(day_of_year=1, slot=1, text="I am ready for today.")
+        self.profile.quotes_enabled = False
+        self.profile.affirmations_enabled = True
+        self.profile.affirmation_morning_enabled = True
+        self.profile.affirmation_morning_time = time(7, 0)
+        self.profile.save()
+
+        with patch("django.utils.timezone.now", return_value=self._fake_now(7, 2)):
+            sent = send_due_notifications()
+        self.assertEqual(sent, 1)
+        mock_send.assert_called_once_with(self.subscription, "Your morning affirmation", "I am ready for today.")
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.last_morning_affirmation_sent_date, date(2030, 1, 1))
+
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_sends_both_quote_and_affirmation_when_both_enabled(self, mock_location, mock_send):
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        SelfAffirmation.objects.create(day_of_year=1, slot=1, text="I am ready for today.")
+        self.profile.affirmations_enabled = True
+        self.profile.affirmation_morning_enabled = True
+        self.profile.affirmation_morning_time = time(7, 0)
+        self.profile.save()
+
+        with patch("django.utils.timezone.now", return_value=self._fake_now(7, 2)):
+            sent = send_due_notifications()
+        self.assertEqual(sent, 2)
+        self.assertEqual(mock_send.call_count, 2)
 
     def test_push_subscribe_requires_login(self):
         response = self.client.post(

@@ -284,10 +284,17 @@ class NotificationSettingsForm(forms.ModelForm):
             "quote_morning_time",
             "quote_evening_enabled",
             "quote_evening_time",
+            "affirmations_enabled",
+            "affirmation_morning_enabled",
+            "affirmation_morning_time",
+            "affirmation_evening_enabled",
+            "affirmation_evening_time",
         )
         widgets = {
             "quote_morning_time": forms.TimeInput(attrs={"type": "time"}),
             "quote_evening_time": forms.TimeInput(attrs={"type": "time"}),
+            "affirmation_morning_time": forms.TimeInput(attrs={"type": "time"}),
+            "affirmation_evening_time": forms.TimeInput(attrs={"type": "time"}),
         }
 
 

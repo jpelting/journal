@@ -644,6 +644,7 @@ class Community(models.Model):
 class CommunityMembership(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),
+        ("approved", "Approved - invite code sent, awaiting entry"),
         ("active", "Active"),
     ]
 

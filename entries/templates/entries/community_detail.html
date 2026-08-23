@@ -13,12 +13,6 @@
     {% endif %}
 
     <section class="part">
-        <h2>Invite code</h2>
-        <p class="helptext">Share this code so others can join.</p>
-        <p><code class="invite-code">{{ community.invite_code }}</code></p>
-    </section>
-
-    <section class="part">
         <h2>Members ({{ memberships|length }})</h2>
         <ul class="entry-list">
             {% for membership in memberships %}
@@ -27,7 +21,75 @@
         </ul>
     </section>
 
+    <p class="form-actions">
+        <button type="button" class="btn" id="prayer-request-button">Prayer Request</button>
+    </p>
+
+    <div class="modal-backdrop" id="prayer-request-chooser-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="prayer-request-chooser-modal-close" aria-label="Close">&times;</button>
+            <h2>Prayer Request</h2>
+            <p class="form-actions prayer-request-chooser-actions">
+                <button type="button" class="btn" id="prayer-request-chooser-submit-btn">Submit new prayer request</button>
+                <button type="button" class="btn btn-secondary" id="prayer-request-chooser-list-btn">Current community prayer request</button>
+            </p>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="prayer-request-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="prayer-request-modal-close" aria-label="Close">&times;</button>
+            <h2>Prayer Request</h2>
+            <form method="post" action="{% url 'entries:prayer-request-create' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <input type="hidden" name="community" value="{{ community.pk }}">
+                <p class="helptext">Community: {{ community.name }}</p>
+
+                <div class="prayer-request-fields">
+                    <div class="prayer-request-text">
+                        <label for="{{ prayer_request_form.text.id_for_label }}">What would you like to share?</label>
+                        {{ prayer_request_form.text }}
+                    </div>
+                    <div class="prayer-request-checks">
+                        <label class="prayer-request-check"><input type="checkbox" name="is_immediate" id="prayer-request-immediate"> Immediate prayer request</label>
+                        <label class="prayer-request-check"><input type="checkbox" name="is_scheduled" id="prayer-request-scheduled"> Scheduled prayer request</label>
+                        <label class="prayer-request-check prayer-request-anonymous"><input type="checkbox" name="is_anonymous" id="prayer-request-anonymous"> Make request anonymous</label>
+                    </div>
+                </div>
+
+                <p class="form-actions"><button type="submit" class="btn">Send</button></p>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="prayer-request-list-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="prayer-request-list-modal-close" aria-label="Close">&times;</button>
+            <h2>Current Prayer Requests</h2>
+            {% if prayer_requests %}
+                <ul class="entry-list">
+                    {% for pr in prayer_requests %}
+                        <li>
+                            <strong>{{ pr.display_name }}</strong>
+                            <span class="helptext">({{ pr.get_request_type_display }})</span>
+                            <div class="scores">{{ pr.text|linebreaksbr }}</div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="helptext">No current prayer requests for {{ community.name }}.</p>
+            {% endif %}
+        </div>
+    </div>
+
     {% if is_admin %}
+        <section class="part">
+            <h2>Invite code</h2>
+            <p class="helptext">Emailed automatically when you approve a request to join. Shown here in case you need to relay it yourself.</p>
+            <p><code class="invite-code">{{ community.invite_code }}</code></p>
+        </section>
+
         <section class="part">
             <h2>Pending requests {% if pending_memberships %}({{ pending_memberships|length }}){% endif %}</h2>
             {% if pending_memberships %}
@@ -123,6 +185,66 @@
             <p class="form-actions"><button type="submit" class="btn btn-danger">Leave community</button></p>
         </form>
     </section>
+
+    <script>
+        (function () {
+            var mainButton = document.getElementById("prayer-request-button");
+            var chooserBackdrop = document.getElementById("prayer-request-chooser-modal-backdrop");
+            var submitBackdrop = document.getElementById("prayer-request-modal-backdrop");
+            var listBackdrop = document.getElementById("prayer-request-list-modal-backdrop");
+            var immediate = document.getElementById("prayer-request-immediate");
+            var scheduled = document.getElementById("prayer-request-scheduled");
+
+            function hide(el) { el.hidden = true; }
+            function show(el) { el.hidden = false; }
+
+            mainButton.addEventListener("click", function () { show(chooserBackdrop); });
+            document.getElementById("prayer-request-chooser-modal-close").addEventListener("click", function () { hide(chooserBackdrop); });
+            chooserBackdrop.addEventListener("click", function (event) {
+                if (event.target === chooserBackdrop) hide(chooserBackdrop);
+            });
+
+            document.getElementById("prayer-request-chooser-submit-btn").addEventListener("click", function () {
+                hide(chooserBackdrop);
+                show(submitBackdrop);
+            });
+            document.getElementById("prayer-request-chooser-list-btn").addEventListener("click", function () {
+                hide(chooserBackdrop);
+                show(listBackdrop);
+            });
+
+            document.getElementById("prayer-request-modal-close").addEventListener("click", function () { hide(submitBackdrop); });
+            submitBackdrop.addEventListener("click", function (event) {
+                if (event.target === submitBackdrop) hide(submitBackdrop);
+            });
+
+            document.getElementById("prayer-request-list-modal-close").addEventListener("click", function () { hide(listBackdrop); });
+            listBackdrop.addEventListener("click", function (event) {
+                if (event.target === listBackdrop) hide(listBackdrop);
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key !== "Escape") return;
+                if (!chooserBackdrop.hidden) hide(chooserBackdrop);
+                if (!submitBackdrop.hidden) hide(submitBackdrop);
+                if (!listBackdrop.hidden) hide(listBackdrop);
+            });
+
+            immediate.addEventListener("change", function () {
+                if (immediate.checked) scheduled.checked = false;
+            });
+            scheduled.addEventListener("change", function () {
+                if (scheduled.checked) immediate.checked = false;
+            });
+
+            submitBackdrop.querySelector("form").addEventListener("submit", function (event) {
+                if (!immediate.checked && !scheduled.checked) {
+                    event.preventDefault();
+                    alert("Choose immediate or scheduled.");
+                }
+            });
+        })();
+    </script>
 
     {% if is_admin %}
         <script>

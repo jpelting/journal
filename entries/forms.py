@@ -266,8 +266,11 @@ class CommunityForm(forms.ModelForm):
 
 
 class JoinCommunityForm(forms.Form):
+    """Requests access to a community - no invite code yet. The code is only sent (by
+    email) once the admin approves the request; see EnterInviteCodeForm for the step
+    that actually completes the join."""
+
     community = forms.ModelChoiceField(queryset=Community.objects.none(), label="Community")
-    invite_code = forms.CharField(max_length=8, label="Invite code")
     agree_to_user_terms = forms.BooleanField(
         required=True, label="I have read and agree to the Community User Agreement"
     )
@@ -276,13 +279,28 @@ class JoinCommunityForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["community"].queryset = Community.objects.exclude(memberships__user=user).order_by("name")
 
+
+class EnterInviteCodeForm(forms.Form):
+    """The final step of joining: the admin has approved the request and the invite
+    code was emailed to the user - this validates that code against the specific
+    community they were approved for."""
+
+    community = forms.ModelChoiceField(queryset=Community.objects.none(), label="Community")
+    invite_code = forms.CharField(max_length=8, label="Invite code")
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["community"].queryset = Community.objects.filter(
+            memberships__user=user, memberships__status="approved"
+        )
+
     def clean(self):
         cleaned_data = super().clean()
         community = cleaned_data.get("community")
         code = cleaned_data.get("invite_code", "").strip().upper()
         cleaned_data["invite_code"] = code
         if community and code and community.invite_code != code:
-            raise forms.ValidationError("That invite code doesn't match the selected community.")
+            raise forms.ValidationError("That invite code doesn't match.")
         return cleaned_data
 
 

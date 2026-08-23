@@ -1,0 +1,8 @@
+{% autoescape off %}Your request to join "{{ community.name }}" was approved.
+
+Your invite code: {{ community.invite_code }}
+
+Go back to the Community page and enter this code to finish joining.
+
+— The Wax Tablet
+{% endautoescape %}

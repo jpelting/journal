@@ -33,6 +33,7 @@ from .forms import (
     AddMemberForm,
     CommunityForm,
     CommunityPrayerSettingsForm,
+    EnterInviteCodeForm,
     EntryForm,
     EveningCheckInForm,
     FeedbackForm,
@@ -361,8 +362,12 @@ def _community_list_context(request, **overrides):
         "pending_requests": CommunityMembership.objects.filter(user=request.user, status="pending")
         .select_related("community")
         .order_by("joined_at"),
+        "approved_requests": CommunityMembership.objects.filter(user=request.user, status="approved")
+        .select_related("community")
+        .order_by("joined_at"),
         "create_form": CommunityForm(),
         "join_form": JoinCommunityForm(user=request.user),
+        "enter_code_form": EnterInviteCodeForm(user=request.user),
     }
     context.update(overrides)
     return context
@@ -400,6 +405,9 @@ def community_create_view(request):
 
 @require_POST
 def community_join_view(request):
+    """Step 1 of joining: request access to a community by name - no invite code yet.
+    The code only goes out (by email) once the admin approves; see
+    community_enter_code_view for the step that completes the join."""
     form = JoinCommunityForm(request.POST, user=request.user)
     if form.is_valid():
         community = form.cleaned_data["community"]
@@ -413,11 +421,36 @@ def community_join_view(request):
             _notify_admin_of_join_request(request, membership)
         elif membership.status == "pending":
             messages.info(request, f'Your request to join "{community.name}" is still awaiting approval.')
+        elif membership.status == "approved":
+            messages.info(
+                request,
+                f'Your request to join "{community.name}" was already approved — check your email for the '
+                "invite code, then enter it below.",
+            )
         else:
             messages.info(request, f'You\'re already a member of "{community.name}".')
         return redirect("entries:community-list")
     return render(
         request, "entries/community_list.html", _community_list_context(request, join_form=form, join_open=True)
+    )
+
+
+@require_POST
+def community_enter_code_view(request):
+    """Step 3 of joining: the admin has approved and emailed the code - entering it
+    correctly here finally makes the membership active."""
+    form = EnterInviteCodeForm(request.POST, user=request.user)
+    if form.is_valid():
+        community = form.cleaned_data["community"]
+        membership = community.memberships.get(user=request.user, status="approved")
+        membership.status = "active"
+        membership.save(update_fields=["status"])
+        messages.success(request, f'You now have access to "{community.name}".')
+        return redirect(community.get_absolute_url())
+    return render(
+        request,
+        "entries/community_list.html",
+        _community_list_context(request, enter_code_form=form, enter_code_open=True),
     )
 
 
@@ -436,11 +469,29 @@ def _notify_admin_of_join_request(request, membership):
     send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [admin_email])
 
 
+def _send_invite_code_email(membership):
+    community = membership.community
+    user = membership.user
+    if not user.email:
+        return
+    context = {"community": community, "membership": membership}
+    subject = render_to_string("entries/community_access_approved_subject.txt", context).strip()
+    body = render_to_string("entries/community_access_approved_email.txt", context)
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
+
+
 def community_detail_view(request, pk):
     community = get_object_or_404(request.user.communities, pk=pk)
     membership = community.memberships.get(user=request.user)
-    if membership.status != "active":
+    if membership.status == "pending":
         messages.info(request, f'Your request to join "{community.name}" is still awaiting approval.')
+        return redirect("entries:community-list")
+    if membership.status == "approved":
+        messages.info(
+            request,
+            f'Your request to join "{community.name}" was approved — check your email for the invite code, '
+            "then enter it below to finish joining.",
+        )
         return redirect("entries:community-list")
     if not membership.user_agreement_accepted_at:
         return render(request, "entries/community_agreement_gate.html", {"community": community})
@@ -450,6 +501,8 @@ def community_detail_view(request, pk):
         "community": community,
         "is_admin": is_admin,
         "memberships": community.memberships.filter(status="active").select_related("user").order_by("joined_at"),
+        "prayer_request_form": PrayerRequestForm(user=request.user),
+        "prayer_requests": community.prayer_requests.select_related("user").order_by("-created_at"),
     }
     if is_admin:
         context["pending_memberships"] = (
@@ -473,12 +526,12 @@ def community_accept_user_agreement_view(request, pk):
 def community_leave_view(request, pk):
     community = get_object_or_404(request.user.communities, pk=pk)
     membership = community.memberships.get(user=request.user)
-    was_pending = membership.status == "pending"
+    was_active = membership.status == "active"
     membership.delete()
-    if was_pending:
-        messages.success(request, f'Your request to join "{community.name}" was canceled.')
-    else:
+    if was_active:
         messages.success(request, f'You left "{community.name}".')
+    else:
+        messages.success(request, f'Your request to join "{community.name}" was canceled.')
     return redirect("entries:community-list")
 
 
@@ -486,9 +539,10 @@ def community_leave_view(request, pk):
 def community_approve_view(request, pk, membership_id):
     community = get_object_or_404(Community, pk=pk, created_by=request.user)
     membership = get_object_or_404(community.memberships, pk=membership_id, status="pending")
-    membership.status = "active"
+    membership.status = "approved"
     membership.save(update_fields=["status"])
-    messages.success(request, f'Approved "{membership.user.username}" into "{community.name}".')
+    _send_invite_code_email(membership)
+    messages.success(request, f'Approved "{membership.user.username}" — the invite code was emailed to them.')
     return redirect(community.get_absolute_url())
 
 
@@ -512,10 +566,10 @@ def community_add_member_view(request, pk):
         )
         if created:
             messages.success(request, f'Added "{user.username}" to "{community.name}".')
-        elif membership.status == "pending":
+        elif membership.status != "active":
             membership.status = "active"
             membership.save(update_fields=["status"])
-            messages.success(request, f'Approved "{user.username}" into "{community.name}".')
+            messages.success(request, f'Added "{user.username}" into "{community.name}".')
         else:
             messages.info(request, f'"{user.username}" is already a member.')
     else:
@@ -853,31 +907,6 @@ def _daily_affirmation_for(user, slot):
     return SelfAffirmation.for_date(timezone.localdate(), slot=slot)
 
 
-def _prayer_request_context(user):
-    """Shared across the three check-in tabs (_checkin_tabs.html): the "Prayer Request" button
-    only shows when the user belongs to at least one active community whose Community User
-    Agreement they've accepted (community_detail_view gates on this same field, prompting
-    acceptance before a member can otherwise participate). community_prayer_lists backs the
-    "Current community prayer request" listing modal - every not-yet-purged request (immediate
-    or scheduled) for each of the user's communities."""
-    communities = Community.objects.filter(
-        memberships__user=user, memberships__status="active", memberships__user_agreement_accepted_at__isnull=False
-    ).order_by("name")
-    if not communities:
-        return {}
-    return {
-        "prayer_request_communities": communities,
-        "prayer_request_form": PrayerRequestForm(user=user),
-        "community_prayer_lists": [
-            {
-                "community": community,
-                "prayer_requests": community.prayer_requests.select_related("user").order_by("-created_at"),
-            }
-            for community in communities
-        ],
-    }
-
-
 def _checkin_availability(now):
     """Morning check-in runs 12:01am-12:00pm; evening follow-up is the complement
     (12:01pm-12:00am), so the two windows never overlap and never gap."""
@@ -944,7 +973,6 @@ def checkin_morning_view(request):
             "daily_affirmation": _daily_affirmation_for(request.user, slot=1),
             "show_entry_saved_modal": request.GET.get("saved") == "1",
             "entry_saved_label": "morning check-in",
-            **_prayer_request_context(request.user),
         },
     )
 
@@ -996,7 +1024,6 @@ def checkin_evening_view(request):
             "daily_affirmation": _daily_affirmation_for(request.user, slot=2),
             "show_entry_saved_modal": request.GET.get("saved") == "1",
             "entry_saved_label": "evening check-in",
-            **_prayer_request_context(request.user),
         },
     )
 
@@ -1029,7 +1056,6 @@ def checkin_moment_view(request):
             "morning_available": morning_available,
             "evening_available": evening_available,
             "today_prayer": Prayer.for_date(timezone.localdate()),
-            **_prayer_request_context(request.user),
         },
     )
 

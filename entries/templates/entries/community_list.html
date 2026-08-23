@@ -22,7 +22,7 @@
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="helptext">You're not in any communities yet — create one or join with an invite code.</p>
+            <p class="helptext">You're not in any communities yet — create one or request access to join one.</p>
         {% endif %}
     </section>
 
@@ -44,11 +44,36 @@
         </section>
     {% endif %}
 
+    {% if approved_requests %}
+        <section class="part">
+            <h2>Ready to join</h2>
+            <p class="helptext">Approved! Check your email for the invite code, then enter it here to finish joining.</p>
+            <ul class="entry-list">
+                {% for membership in approved_requests %}
+                    <li>
+                        <strong>{{ membership.community.name }}</strong>
+                        <form method="post" action="{% url 'entries:community-enter-code' %}" class="enter-code-row">
+                            {% csrf_token %}
+                            <input type="hidden" name="community" value="{{ membership.community.pk }}">
+                            <input type="text" name="invite_code" placeholder="Invite code" maxlength="8" required>
+                            <button type="submit" class="btn">Enter code</button>
+                        </form>
+                        <form method="post" action="{% url 'entries:community-leave' membership.community.pk %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary">Cancel</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+            {% if enter_code_form.non_field_errors %}<p class="helptext">{{ enter_code_form.non_field_errors }}</p>{% endif %}
+        </section>
+    {% endif %}
+
     <div class="modal-backdrop" id="create-community-modal-backdrop" {% if not create_open %}hidden{% endif %}>
         <div class="modal" role="dialog" aria-modal="true">
             <button type="button" class="modal-close" id="create-community-modal-close" aria-label="Close">&times;</button>
             <h2>Create a Community</h2>
-            <p class="helptext">You'll get an invite code to share with anyone you want to join.</p>
+            <p class="helptext">Anyone can request to join — you'll review and approve each request, and the invite code is emailed to them automatically.</p>
             <form method="post" action="{% url 'entries:community-create' %}" novalidate>
                 {% csrf_token %}
                 {{ create_form.non_field_errors }}
@@ -81,10 +106,6 @@
                 <label for="{{ join_form.community.id_for_label }}">Community</label>
                 {{ join_form.community }}
                 {{ join_form.community.errors }}
-
-                <label for="{{ join_form.invite_code.id_for_label }}">Invite code</label>
-                {{ join_form.invite_code }}
-                {{ join_form.invite_code.errors }}
 
                 <p class="helptext"><a href="{% url 'entries:community-user-agreement' %}" target="_blank" rel="noopener">Read the Community User Agreement</a></p>
                 <label class="checkbox-field"><input type="checkbox" name="agree_to_user_terms" id="{{ join_form.agree_to_user_terms.id_for_label }}" required> {{ join_form.agree_to_user_terms.label }}</label>

@@ -8,7 +8,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-STATE_FILE = settings.BASE_DIR / ".announcement_gen_state.json"
+LEGACY_STATE_FILE = settings.BASE_DIR / ".announcement_gen_state.json"
 
 MODEL = "claude-haiku-4-5"
 API_URL = "https://api.anthropic.com/v1/messages"
@@ -65,8 +65,10 @@ OUTPUT_SCHEMA = {
 class Command(BaseCommand):
     help = (
         "Drafts What's New announcements from recent git commits using the Claude API, "
-        "saved inactive for review in /admin/entries/announcement/. Run this locally "
-        "(needs the git history) after a batch of work, before deploying."
+        "saved inactive for review in /admin/entries/announcement/. Needs a git checkout "
+        "with real history (run locally, or in CI - see .github/workflows/generate-announcements.yml) "
+        "and a DATABASE_URL reaching production, since state (the last commit processed) "
+        "is tracked in AnnouncementGenState so both places stay in sync."
     )
 
     def handle(self, *args, **options):
@@ -119,15 +121,28 @@ class Command(BaseCommand):
             )
 
     def _read_last_sha(self):
-        if not STATE_FILE.exists():
+        from entries.models import AnnouncementGenState
+
+        state = AnnouncementGenState.objects.first()
+        if state:
+            return state.last_sha or None
+
+        # No DB state yet - most likely the very first run against this database.
+        # Fall back to the legacy local file, if one exists, so switching over doesn't
+        # re-announce a batch of commits an earlier local-only run already covered.
+        if not LEGACY_STATE_FILE.exists():
             return None
         try:
-            return json.loads(STATE_FILE.read_text(encoding="utf-8")).get("last_sha")
+            return json.loads(LEGACY_STATE_FILE.read_text(encoding="utf-8")).get("last_sha")
         except (json.JSONDecodeError, OSError):
             return None
 
     def _write_last_sha(self, sha):
-        STATE_FILE.write_text(json.dumps({"last_sha": sha}), encoding="utf-8")
+        from entries.models import AnnouncementGenState
+
+        state, _ = AnnouncementGenState.objects.get_or_create(pk=1)
+        state.last_sha = sha
+        state.save(update_fields=["last_sha", "updated_at"])
 
     def _current_head(self, repo_root):
         return self._git(repo_root, ["rev-parse", "HEAD"]).strip()

@@ -1,7 +1,10 @@
 {% extends "entries/base.html" %}
 {% block title %}Export - The Wax Tablet{% endblock %}
 {% block content %}
-    <h1>Export</h1>
+    <p><a href="{% url 'entries:list' %}">&laquo; Back to Journals</a></p>
+    <div class="checkin-header">
+        <h1>Export</h1>
+    </div>
     <p class="helptext">Choose a journal type, then select entries to download as a single PDF, in chronological order.</p>
 
     <form method="get" id="type-form">

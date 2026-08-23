@@ -17,16 +17,19 @@ from .bible import get_passage_text
 from .models import (
     AccessRequest,
     Announcement,
+    AnnouncementGenState,
+    Community,
+    CommunityMembership,
     DevotionalPrompt,
     Entry,
     FeatureUsageEvent,
     Feedback,
-    Goal,
     IntrospectionPrompt,
     LoginCount,
     MomentCheckIn,
     MotivationalQuote,
     Prayer,
+    PrayerRequest,
     Profile,
     PushSubscription,
     SelfAffirmation,
@@ -38,11 +41,6 @@ from .reports import build_usage_report, render_report_csv
 
 ACTIVE_WINDOW_MINUTES = 5
 DASHBOARD_WINDOW_DAYS = 30
-
-
-class GoalInline(admin.TabularInline):
-    model = Goal
-    extra = 0
 
 
 admin.site.unregister(User)
@@ -177,6 +175,12 @@ admin.site.get_urls = _get_urls
 
 @admin.register(Entry)
 class EntryAdmin(admin.ModelAdmin):
+    """Deliberately exposes only structural/metadata fields - never the actual written
+    content of an entry (all EncryptedTextField), which is private to the user who wrote
+    it. See stoic_practice_display for why "2. Stoic guided journal" etc. keep their prompt
+    reference but drop the response field entirely rather than just marking it read-only -
+    read-only would still render the decrypted text."""
+
     list_display = [
         "date",
         "user",
@@ -188,14 +192,7 @@ class EntryAdmin(admin.ModelAdmin):
     list_filter = ["user"]
     date_hierarchy = "date"
     ordering = ["-date"]
-    inlines = [GoalInline]
-    readonly_fields = ["introspection_question", "stoic_practice_display"]
-
-    def introspection_question(self, obj):
-        prompt = obj.introspection_prompt if obj.pk else None
-        return prompt.question if prompt else "—"
-
-    introspection_question.short_description = "Question for this day"
+    readonly_fields = ["stoic_practice_display"]
 
     def stoic_practice_display(self, obj):
         practice = obj.stoic_practice if obj.pk else None
@@ -214,7 +211,6 @@ class EntryAdmin(admin.ModelAdmin):
                     "morning_physical_score",
                     "morning_emotional_score",
                     "morning_spiritual_score",
-                    "one_percent_goal",
                     "evening_mental_score",
                     "evening_physical_score",
                     "evening_emotional_score",
@@ -223,37 +219,9 @@ class EntryAdmin(admin.ModelAdmin):
                 ]
             },
         ),
-        (
-            "1b. Stoic daily reflection",
-            {
-                "fields": [
-                    "stoic_practice_display",
-                    "morning_anxious_about",
-                    "morning_within_control",
-                    "morning_reserve_clause",
-                    "evening_did_well",
-                    "evening_where_falter",
-                    "evening_could_improve",
-                    "evening_gratitude_audit",
-                ]
-            },
-        ),
-        (
-            "2. Stoic guided journal",
-            {"fields": ["stoic_prompt", "stoic_response"]},
-        ),
-        (
-            "3. Biblical devotional",
-            {"fields": ["devotional_prompt", "devotional_response"]},
-        ),
-        (
-            "4. Freeform journal",
-            {"fields": ["freeform_entry"]},
-        ),
-        (
-            "5. Introspection",
-            {"fields": ["introspection_question", "introspection_response"]},
-        ),
+        ("1b. Stoic daily reflection", {"fields": ["stoic_practice_display"]}),
+        ("2. Stoic guided journal", {"fields": ["stoic_prompt"]}),
+        ("3. Biblical devotional", {"fields": ["devotional_prompt"]}),
     ]
 
 
@@ -325,10 +293,13 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(MomentCheckIn)
 class MomentCheckInAdmin(admin.ModelAdmin):
+    """Excludes note (EncryptedTextField) - private to the user who wrote it."""
+
     list_display = ["created_at", "user", "emotions", "entry"]
     list_filter = ["user"]
     date_hierarchy = "created_at"
     ordering = ["-created_at"]
+    exclude = ["note"]
 
 
 @admin.register(AccessRequest)
@@ -339,12 +310,46 @@ class AccessRequestAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
 
 
+class CommunityMembershipInline(admin.TabularInline):
+    model = CommunityMembership
+    extra = 0
+    readonly_fields = ["joined_at"]
+
+
+@admin.register(Community)
+class CommunityAdmin(admin.ModelAdmin):
+    list_display = ["name", "invite_code", "created_by", "prayer_digest_time", "created_at"]
+    readonly_fields = ["invite_code", "created_at", "last_prayer_digest_sent_date"]
+    ordering = ["name"]
+    inlines = [CommunityMembershipInline]
+
+
+@admin.register(PrayerRequest)
+class PrayerRequestAdmin(admin.ModelAdmin):
+    """Excludes text (EncryptedTextField) - private to the community, not the app admin."""
+
+    list_display = ["community", "user", "request_type", "created_at", "immediate_sent_at", "digest_sent_at"]
+    list_filter = ["request_type", "community"]
+    readonly_fields = ["created_at"]
+    ordering = ["-created_at"]
+    exclude = ["text"]
+
+
 @admin.register(Announcement)
 class AnnouncementAdmin(admin.ModelAdmin):
     list_display = ["title", "category", "is_active", "created_at"]
     list_filter = ["category", "is_active"]
     list_editable = ["is_active"]
     ordering = ["-created_at"]
+
+
+@admin.register(AnnouncementGenState)
+class AnnouncementGenStateAdmin(admin.ModelAdmin):
+    list_display = ["last_sha", "updated_at"]
+    readonly_fields = ["updated_at"]
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(Feedback)

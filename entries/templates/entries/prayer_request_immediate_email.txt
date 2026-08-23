@@ -1,0 +1,6 @@
+{% autoescape off %}{{ prayer_request.display_name }} shared an immediate prayer request with {{ community.name }}:
+
+{{ prayer_request.text }}
+
+— The Wax Tablet
+{% endautoescape %}

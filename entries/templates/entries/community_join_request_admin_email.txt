@@ -1,0 +1,6 @@
+{% autoescape off %}{{ membership.user.username }} has requested to join "{{ community.name }}".
+
+Review and approve or reject the request here: {{ community_url }}
+
+— The Wax Tablet
+{% endautoescape %}

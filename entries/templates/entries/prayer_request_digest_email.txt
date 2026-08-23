@@ -1,0 +1,7 @@
+{% autoescape off %}Today's prayer requests and concerns for {{ community.name }}:
+
+{% for prayer_request in prayer_requests %}{{ prayer_request.display_name }} ({{ prayer_request.get_request_type_display }}):
+{{ prayer_request.text }}
+
+{% endfor %}— The Wax Tablet
+{% endautoescape %}

@@ -2,12 +2,25 @@
 {% block title %}{{ month_name }} {{ year }} - The Wax Tablet{% endblock %}
 {% block bodyclass %}wide{% endblock %}
 {% block content %}
-    <h1>{{ month_name }} {{ year }}</h1>
-    <p class="form-actions"><button type="button" class="btn" id="calendar-legend-btn">Calendar Legend</button></p>
+    <div class="checkin-header">
+        <h1>{{ month_name }} {{ year }}</h1>
+    </div>
+    <p class="form-actions">
+        <button type="button" class="btn" id="calendar-legend-btn">Calendar Legend</button>
+    </p>
+    <p class="form-actions">
+        <label class="cal-metric-label" for="cal-metric-select">Heat map:
+            <select id="cal-metric-select">
+                {% for key, label in metric_choices %}
+                    <option value="{{ key }}"{% if key == metric %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </p>
     <div class="calendar-nav">
-        <a href="{% url 'entries:calendar' prev_year prev_month %}">&laquo; Prev</a>
-        <a href="{% url 'entries:calendar' %}">Today</a>
-        <a href="{% url 'entries:calendar' next_year next_month %}">Next &raquo;</a>
+        <a href="{% url 'entries:calendar' prev_year prev_month %}?metric={{ metric }}">&laquo; Prev</a>
+        <a href="{% url 'entries:calendar' %}?metric={{ metric }}">Today</a>
+        <a href="{% url 'entries:calendar' next_year next_month %}?metric={{ metric }}">Next &raquo;</a>
     </div>
 
     <div class="calendar-scroll">
@@ -87,7 +100,7 @@
                     </div>
                     <div class="cal-legend-callout" style="top: 70%;">
                         <span class="callout-label">Cell color</span>
-                        <p>A heat map blended from those four scores, red (low) to green (high) — scan a month at a glance to spot trends.</p>
+                        <p>A heat map of the metric selected above — Overall blends all four scores, or pick a single dimension — red (low) to green (high) — scan a month at a glance to spot trends.</p>
                     </div>
                 </div>
             </div>
@@ -97,7 +110,7 @@
                 <span class="legend-item"><span class="legend-swatch" style="background: hsl(32, 75%, 78%);"></span>3&ndash;5</span>
                 <span class="legend-item"><span class="legend-swatch" style="background: hsl(52, 75%, 78%);"></span>6&ndash;7</span>
                 <span class="legend-item"><span class="legend-swatch" style="background: hsl(125, 75%, 78%);"></span>8&ndash;10</span>
-                <span class="legend-item legend-note">Paler = fewer dimensions logged that day</span>
+                {% if metric == "overall" %}<span class="legend-item legend-note">Paler = fewer dimensions logged that day</span>{% endif %}
             </div>
         </div>
     </div>
@@ -120,6 +133,15 @@
     </div>
 
     <script>
+        (function () {
+            var metricSelect = document.getElementById("cal-metric-select");
+            metricSelect.addEventListener("change", function () {
+                var url = new URL(window.location.href);
+                url.searchParams.set("metric", metricSelect.value);
+                window.location.href = url.toString();
+            });
+        })();
+
         (function () {
             var backdrop = document.getElementById("day-modal-backdrop");
             var body = document.getElementById("day-modal-body");

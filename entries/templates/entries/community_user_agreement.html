@@ -1,0 +1,12 @@
+{% extends "entries/base.html" %}
+{% block title %}Community User Agreement - The Wax Tablet{% endblock %}
+{% block content %}
+    <p><a href="{% url 'entries:community-list' %}">&laquo; Back to Community</a></p>
+    <div class="checkin-header">
+        <h1>Community User Agreement</h1>
+    </div>
+
+    <section class="part">
+        {% include "entries/_community_user_agreement_body.html" %}
+    </section>
+{% endblock %}

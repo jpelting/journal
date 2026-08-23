@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import EMOTION_CHOICES, AccessRequest, Entry, Feedback, Goal, Profile, SurveyResponse
+from .models import EMOTION_CHOICES, AccessRequest, Community, Entry, Feedback, Goal, PrayerRequest, Profile, SurveyResponse
 
 SLIDER_ATTRS = {"type": "range", "min": 1, "max": 10, "step": 1, "class": "slider"}
 SCORE_WIDGETS = {
@@ -248,6 +248,98 @@ class FeedbackForm(forms.ModelForm):
                 attrs={"rows": 6, "placeholder": "A bug, an idea, anything you'd like changed…"}
             ),
         }
+
+
+class CommunityForm(forms.ModelForm):
+    agree_to_admin_terms = forms.BooleanField(
+        required=True, label="I have read and agree to the Community Admin Agreement"
+    )
+
+    class Meta:
+        model = Community
+        fields = ["name", "description"]
+        widgets = {
+            "description": forms.Textarea(
+                attrs={"rows": 3, "placeholder": "What's this community about? (optional)"}
+            ),
+        }
+
+
+class JoinCommunityForm(forms.Form):
+    community = forms.ModelChoiceField(queryset=Community.objects.none(), label="Community")
+    invite_code = forms.CharField(max_length=8, label="Invite code")
+    agree_to_user_terms = forms.BooleanField(
+        required=True, label="I have read and agree to the Community User Agreement"
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["community"].queryset = Community.objects.exclude(memberships__user=user).order_by("name")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        community = cleaned_data.get("community")
+        code = cleaned_data.get("invite_code", "").strip().upper()
+        cleaned_data["invite_code"] = code
+        if community and code and community.invite_code != code:
+            raise forms.ValidationError("That invite code doesn't match the selected community.")
+        return cleaned_data
+
+
+class AddMemberForm(forms.Form):
+    username = forms.CharField(max_length=150, label="Username")
+
+    def clean_username(self):
+        username = self.cleaned_data["username"].strip()
+        try:
+            self.user = get_user_model().objects.get(username__iexact=username)
+        except get_user_model().DoesNotExist:
+            raise forms.ValidationError("No user found with that username.")
+        return username
+
+
+class CommunityPrayerSettingsForm(forms.ModelForm):
+    class Meta:
+        model = Community
+        fields = ["prayer_digest_time"]
+
+
+class PrayerRequestForm(forms.Form):
+    community = forms.ModelChoiceField(queryset=Community.objects.none(), label="Community")
+    text = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 4, "placeholder": "Share a prayer request or concern…"}),
+        label="Prayer request",
+    )
+    is_immediate = forms.BooleanField(required=False, label="Immediate prayer request")
+    is_scheduled = forms.BooleanField(required=False, label="Scheduled prayer request")
+    is_anonymous = forms.BooleanField(required=False, label="Make request anonymous")
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        self.fields["community"].queryset = Community.objects.filter(
+            memberships__user=user, memberships__status="active", memberships__user_agreement_accepted_at__isnull=False
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        is_immediate = cleaned_data.get("is_immediate")
+        is_scheduled = cleaned_data.get("is_scheduled")
+        if is_immediate and is_scheduled:
+            raise forms.ValidationError("Choose either immediate or scheduled, not both.")
+        if not is_immediate and not is_scheduled:
+            raise forms.ValidationError("Choose immediate or scheduled.")
+        cleaned_data["request_type"] = "immediate" if is_immediate else "scheduled"
+        return cleaned_data
+
+    def save(self):
+        return PrayerRequest.objects.create(
+            community=self.cleaned_data["community"],
+            user=self.user,
+            request_type=self.cleaned_data["request_type"],
+            text=self.cleaned_data["text"],
+            is_anonymous=self.cleaned_data["is_anonymous"],
+        )
 
 
 class AccountUserForm(forms.ModelForm):

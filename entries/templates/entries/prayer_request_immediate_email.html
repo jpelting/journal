@@ -1,0 +1,7 @@
+{% extends "entries/_prayer_email_base.html" %}
+{% block title %}Immediate Prayer Request - The Wax Tablet{% endblock %}
+{% block heading %}Immediate Prayer Request{% endblock %}
+{% block content %}
+<p style="margin:0 0 10px; font-size:14px; color:#2b2620;"><strong>{{ prayer_request.display_name }}</strong> shared an immediate prayer request:</p>
+<div style="margin:0; padding:16px 18px; background-color:#f9f7f1; border-left:3px solid #c68b45; border-radius:4px; font-size:15px; line-height:1.55; color:#2b2620;">{{ prayer_request.text|linebreaksbr }}</div>
+{% endblock %}

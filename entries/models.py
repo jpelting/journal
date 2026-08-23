@@ -6,6 +6,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 
 from .fields import EncryptedTextField
 
@@ -458,6 +459,19 @@ class Announcement(models.Model):
         return f"{self.get_category_display()}: {self.title}"
 
 
+class AnnouncementGenState(models.Model):
+    """Singleton row tracking the last commit SHA the generate_announcements command
+    processed. Lives in the database (not a local file) so state is correct no matter
+    where the command runs - locally or from a CI job - since both talk to the same
+    production database."""
+
+    last_sha = models.CharField(max_length=40, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Announcement generation state (last_sha={self.last_sha[:8] or 'none'})"
+
+
 class LoginCount(models.Model):
     """Tracks how many times each user has signed in, shown as a column on the admin User list.
 
@@ -581,3 +595,109 @@ class SurveyResponse(models.Model):
 
     def __str__(self):
         return f"Survey response: {self.user}"
+
+
+def _generate_invite_code():
+    return get_random_string(8, allowed_chars="ABCDEFGHJKMNPQRSTUVWXYZ23456789")
+
+
+class Community(models.Model):
+    """A named group of users, joined by sharing an invite code (private, not a public directory)."""
+
+    name = models.CharField(max_length=150)
+    description = models.TextField(blank=True)
+    invite_code = models.CharField(max_length=8, unique=True, default=_generate_invite_code, editable=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="communities_created"
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    members = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, through="CommunityMembership", related_name="communities"
+    )
+
+    prayer_digest_time = models.TimeField(
+        default=time(20, 0),
+        help_text="Daily time (set by the community admin) that pending prayer requests are bundled into one digest email.",
+    )
+    last_prayer_digest_sent_date = models.DateField(
+        null=True, blank=True, help_text="Dedupes digest sends within the same day across cron ticks."
+    )
+
+    admin_agreement_accepted_at = models.DateTimeField(
+        null=True, blank=True, help_text="When the creator accepted the Community Admin Agreement to create this community."
+    )
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "communities"
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("entries:community-detail", args=[self.pk])
+
+    def is_admin(self, user):
+        return user.pk == self.created_by_id
+
+
+class CommunityMembership(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("active", "Active"),
+    ]
+
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name="memberships")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="community_memberships")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="active")
+    joined_at = models.DateTimeField(default=timezone.now)
+    user_agreement_accepted_at = models.DateTimeField(
+        null=True, blank=True, help_text="When this member accepted the Community User Agreement to request joining."
+    )
+
+    class Meta:
+        unique_together = ("community", "user")
+        ordering = ["joined_at"]
+
+    def __str__(self):
+        return f"{self.user} in {self.community} ({self.status})"
+
+
+class PrayerRequest(models.Model):
+    """A community prayer request/concern, submitted as either "immediate" (triggers an
+    instant email + push to the community right away) or "scheduled" (held until the
+    community's next daily digest). Immediate requests are *also* rolled into that day's
+    digest alongside scheduled ones - see entries.prayer.send_due_prayer_digests(). Rows are
+    purged 30 minutes after their digest_sent_at (entries.prayer.purge_expired_prayer_requests()),
+    so this table only ever holds same-day, not-yet-digested-long-ago data.
+    """
+
+    REQUEST_TYPE_CHOICES = [
+        ("immediate", "Immediate"),
+        ("scheduled", "Scheduled"),
+    ]
+
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name="prayer_requests")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="prayer_requests")
+    request_type = models.CharField(max_length=10, choices=REQUEST_TYPE_CHOICES)
+    text = EncryptedTextField()
+    is_anonymous = models.BooleanField(
+        default=False, help_text="Hides the requester's name in the community listing and in emails."
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    immediate_sent_at = models.DateTimeField(
+        null=True, blank=True, help_text="When the instant email/push went out, for an immediate request."
+    )
+    digest_sent_at = models.DateTimeField(
+        null=True, blank=True, help_text="When this request was included in the community's daily digest email."
+    )
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.get_request_type_display()} prayer request from {self.user} in {self.community}"
+
+    @property
+    def display_name(self):
+        return "Anonymous" if self.is_anonymous else self.user.username

@@ -1,0 +1,1 @@
+{% autoescape off %}[{{ community.name }}] Immediate prayer request from {{ prayer_request.display_name }}{% endautoescape %}

@@ -1,0 +1,19 @@
+{% extends "entries/base.html" %}
+{% block title %}Community Admin Agreement - The Wax Tablet{% endblock %}
+{% block content %}
+    <p><a href="{% url 'entries:community-list' %}">&laquo; Back to Community</a></p>
+    <div class="checkin-header">
+        <h1>Community Admin Agreement</h1>
+    </div>
+
+    <section class="part">
+        <p>The Community feature exists to help members share prayer concerns and requests with a trusted group of people. When you create a community, you become its admin, and by doing so you agree to:</p>
+        <ul class="entry-list">
+            <li>Use the community for sharing prayer requests and concerns, not for unrelated purposes.</li>
+            <li>Review join requests thoughtfully, approving only people who should reasonably be part of this community.</li>
+            <li>Manage the community's membership - including removing members if needed - to keep the space safe and appropriate.</li>
+            <li>Take responsibility for upholding respectful standards of conduct among members.</li>
+        </ul>
+        <p class="helptext">As admin, you are the sole moderator of this community. The Wax Tablet does not actively monitor community content - that responsibility rests with you.</p>
+    </section>
+{% endblock %}

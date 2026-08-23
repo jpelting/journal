@@ -1,0 +1,277 @@
+{% extends "entries/base.html" %}
+{% block title %}{{ community.name }} - The Wax Tablet{% endblock %}
+{% block content %}
+    <p><a href="{% url 'entries:community-list' %}">&laquo; Back to Community</a></p>
+    <div class="checkin-header">
+        <h1>{{ community.name }}</h1>
+    </div>
+
+    {% if community.description %}
+        <section class="part">
+            <p>{{ community.description }}</p>
+        </section>
+    {% endif %}
+
+    <section class="part">
+        <h2>Invite code</h2>
+        <p class="helptext">Share this code so others can join.</p>
+        <p><code class="invite-code">{{ community.invite_code }}</code></p>
+    </section>
+
+    <section class="part">
+        <h2>Members ({{ memberships|length }})</h2>
+        <ul class="entry-list">
+            {% for membership in memberships %}
+                <li>{{ membership.user.username }}{% if membership.user_id == community.created_by_id %} <span class="helptext">(admin)</span>{% endif %}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    {% if is_admin %}
+        <section class="part">
+            <h2>Pending requests {% if pending_memberships %}({{ pending_memberships|length }}){% endif %}</h2>
+            {% if pending_memberships %}
+                <ul class="entry-list">
+                    {% for membership in pending_memberships %}
+                        <li>
+                            {{ membership.user.username }}
+                            <form method="post" action="{% url 'entries:community-approve' community.pk membership.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn">Approve</button>
+                            </form>
+                            <form method="post" action="{% url 'entries:community-reject' community.pk membership.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary">Reject</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="helptext">No pending requests right now.</p>
+            {% endif %}
+        </section>
+
+        <section class="part">
+            <h2>Add a member directly</h2>
+            <p class="helptext">Add an existing user without waiting for them to request to join.</p>
+            <form method="post" action="{% url 'entries:community-add-member' community.pk %}" novalidate>
+                {% csrf_token %}
+                {{ add_member_form.non_field_errors }}
+
+                <label for="{{ add_member_form.username.id_for_label }}">Username</label>
+                {{ add_member_form.username }}
+                {{ add_member_form.username.errors }}
+
+                <p class="form-actions"><button type="submit" class="btn">Add member</button></p>
+            </form>
+        </section>
+
+        <section class="part">
+            <h2>Prayer request settings</h2>
+            <p class="helptext">Members' prayer requests are bundled into one daily digest email sent at this time.</p>
+            <form method="post" action="{% url 'entries:community-prayer-settings' community.pk %}" novalidate>
+                {% csrf_token %}
+                {{ prayer_settings_form.non_field_errors }}
+                {{ prayer_settings_form.prayer_digest_time.errors }}
+                <input type="hidden" name="prayer_digest_time" id="prayer-digest-time-input" value="{{ community.prayer_digest_time|time:'H:i' }}">
+
+                <label for="prayer-digest-time-display">Daily digest time</label>
+                <input type="text" id="prayer-digest-time-display" readonly value="{{ community.prayer_digest_time|time:'g:i A' }}">
+
+                <p class="form-actions"><button type="submit" class="btn">Save</button></p>
+            </form>
+        </section>
+
+        <div class="modal-backdrop" id="prayer-clock-modal-backdrop" hidden>
+            <div class="modal" role="dialog" aria-modal="true">
+                <button type="button" class="modal-close" id="prayer-clock-modal-close" aria-label="Close">&times;</button>
+                <h2>Set digest time</h2>
+                <div class="clock-picker" id="prayer-clock-picker" data-initial="{{ community.prayer_digest_time|time:'H:i' }}">
+                    <p class="clock-picker-readout">
+                        <span class="clock-readout-part" id="prayer-clock-hour-readout" tabindex="0" role="button">--</span
+                        ><span>:</span><span class="clock-readout-part" id="prayer-clock-minute-readout" tabindex="0" role="button">--</span>
+                        <span class="clock-picker-ampm">
+                            <button type="button" id="prayer-clock-am">AM</button>
+                            <button type="button" id="prayer-clock-pm">PM</button>
+                        </span>
+                    </p>
+                    <svg viewBox="0 0 220 220" width="220" height="220" class="clock-face">
+                        <circle cx="110" cy="110" r="105" class="clock-face-circle"></circle>
+                        <line x1="110" y1="110" x2="110" y2="110" class="clock-hand" id="prayer-clock-hand"></line>
+                        <circle cx="110" cy="110" r="4" class="clock-center-dot"></circle>
+                        <g id="prayer-clock-marks"></g>
+                    </svg>
+                    <p class="helptext" id="prayer-clock-step-label">Select the hour</p>
+                </div>
+                <p class="form-actions"><button type="button" class="btn" id="prayer-clock-done">Done</button></p>
+            </div>
+        </div>
+
+        <section class="part">
+            <h2>Admin agreement</h2>
+            {% if community.admin_agreement_accepted_at %}
+                <p class="helptext">You accepted the <a href="{% url 'entries:community-admin-agreement' %}" target="_blank" rel="noopener">Community Admin Agreement</a> on {{ community.admin_agreement_accepted_at|date:"N j, Y" }}.</p>
+            {% else %}
+                <p class="helptext"><a href="{% url 'entries:community-admin-agreement' %}" target="_blank" rel="noopener">Read the Community Admin Agreement</a></p>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <section class="part danger-zone">
+        <form method="post" action="{% url 'entries:community-leave' community.pk %}" onsubmit="return confirm('Leave &quot;{{ community.name|escapejs }}&quot;? You can rejoin later with the invite code.');">
+            {% csrf_token %}
+            <p class="form-actions"><button type="submit" class="btn btn-danger">Leave community</button></p>
+        </form>
+    </section>
+
+    {% if is_admin %}
+        <script>
+            (function () {
+                var picker = document.getElementById("prayer-clock-picker");
+                var hiddenInput = document.getElementById("prayer-digest-time-input");
+                var displayField = document.getElementById("prayer-digest-time-display");
+                var backdrop = document.getElementById("prayer-clock-modal-backdrop");
+                var hourReadout = document.getElementById("prayer-clock-hour-readout");
+                var minuteReadout = document.getElementById("prayer-clock-minute-readout");
+                var stepLabel = document.getElementById("prayer-clock-step-label");
+                var marksGroup = document.getElementById("prayer-clock-marks");
+                var hand = document.getElementById("prayer-clock-hand");
+                var amButton = document.getElementById("prayer-clock-am");
+                var pmButton = document.getElementById("prayer-clock-pm");
+                var svgNS = "http://www.w3.org/2000/svg";
+                var CENTER = 110, MARK_RADIUS = 85;
+
+                var parts = (picker.dataset.initial || "20:00").split(":");
+                var hour24 = parseInt(parts[0], 10);
+                var minute = parseInt(parts[1], 10);
+                var period = hour24 >= 12 ? "PM" : "AM";
+                var hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+                var mode = "hour";
+
+                function polarPoint(index, count, radius) {
+                    var angle = (index / count) * 2 * Math.PI - Math.PI / 2;
+                    return { x: CENTER + radius * Math.cos(angle), y: CENTER + radius * Math.sin(angle) };
+                }
+
+                function clearMarks() {
+                    while (marksGroup.firstChild) marksGroup.removeChild(marksGroup.firstChild);
+                }
+
+                function addMark(pt, label, value, isSelected, onSelect) {
+                    var g = document.createElementNS(svgNS, "g");
+                    g.setAttribute("class", "clock-mark" + (isSelected ? " selected" : ""));
+                    g.setAttribute("tabindex", "0");
+                    g.setAttribute("role", "button");
+
+                    var circle = document.createElementNS(svgNS, "circle");
+                    circle.setAttribute("cx", pt.x);
+                    circle.setAttribute("cy", pt.y);
+                    circle.setAttribute("r", "15");
+                    g.appendChild(circle);
+
+                    var text = document.createElementNS(svgNS, "text");
+                    text.setAttribute("x", pt.x);
+                    text.setAttribute("y", pt.y);
+                    text.textContent = label;
+                    g.appendChild(text);
+
+                    g.addEventListener("click", function () { onSelect(value); });
+                    g.addEventListener("keydown", function (event) {
+                        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(value); }
+                    });
+
+                    marksGroup.appendChild(g);
+                }
+
+                function updateHand(index, count) {
+                    var pt = polarPoint(index % count, count, MARK_RADIUS);
+                    hand.setAttribute("x2", pt.x);
+                    hand.setAttribute("y2", pt.y);
+                }
+
+                function drawHourMarks() {
+                    clearMarks();
+                    for (var h = 1; h <= 12; h++) {
+                        var pt = polarPoint(h % 12, 12, MARK_RADIUS);
+                        addMark(pt, h, h, h === hour12, selectHour);
+                    }
+                    updateHand(hour12 % 12, 12);
+                    stepLabel.textContent = "Select the hour";
+                }
+
+                function drawMinuteMarks() {
+                    clearMarks();
+                    for (var m = 0; m < 60; m += 5) {
+                        var pt = polarPoint(m / 5, 12, MARK_RADIUS);
+                        addMark(pt, m === 0 ? "00" : m, m, m === minute, selectMinute);
+                    }
+                    updateHand(minute / 5, 12);
+                    stepLabel.textContent = "Select the minutes";
+                }
+
+                function selectHour(value) {
+                    hour12 = value;
+                    mode = "minute";
+                    render();
+                    drawMinuteMarks();
+                }
+
+                function selectMinute(value) {
+                    minute = value;
+                    render();
+                    drawMinuteMarks();
+                }
+
+                function selectPeriod(newPeriod) {
+                    period = newPeriod;
+                    amButton.classList.toggle("active", period === "AM");
+                    pmButton.classList.toggle("active", period === "PM");
+                    render();
+                }
+
+                function render() {
+                    hourReadout.textContent = hour12;
+                    minuteReadout.textContent = minute < 10 ? "0" + minute : minute;
+                    hourReadout.classList.toggle("active", mode === "hour");
+                    minuteReadout.classList.toggle("active", mode === "minute");
+                    var h24 = (hour12 % 12) + (period === "PM" ? 12 : 0);
+                    var hh = h24 < 10 ? "0" + h24 : h24;
+                    var mm = minute < 10 ? "0" + minute : minute;
+                    hiddenInput.value = hh + ":" + mm;
+                    displayField.value = hour12 + ":" + mm + " " + period;
+                }
+
+                function openModal() {
+                    mode = "hour";
+                    render();
+                    drawHourMarks();
+                    backdrop.hidden = false;
+                }
+
+                function closeModal() { backdrop.hidden = true; }
+
+                hourReadout.addEventListener("click", function () { mode = "hour"; render(); drawHourMarks(); });
+                minuteReadout.addEventListener("click", function () { mode = "minute"; render(); drawMinuteMarks(); });
+                amButton.addEventListener("click", function () { selectPeriod("AM"); });
+                pmButton.addEventListener("click", function () { selectPeriod("PM"); });
+
+                displayField.addEventListener("click", openModal);
+                displayField.addEventListener("keydown", function (event) {
+                    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openModal(); }
+                });
+                document.getElementById("prayer-clock-modal-close").addEventListener("click", closeModal);
+                document.getElementById("prayer-clock-done").addEventListener("click", closeModal);
+                backdrop.addEventListener("click", function (event) {
+                    if (event.target === backdrop) closeModal();
+                });
+                document.addEventListener("keydown", function (event) {
+                    if (event.key === "Escape" && !backdrop.hidden) closeModal();
+                });
+
+                amButton.classList.toggle("active", period === "AM");
+                pmButton.classList.toggle("active", period === "PM");
+                render();
+            })();
+        </script>
+    {% endif %}
+{% endblock %}

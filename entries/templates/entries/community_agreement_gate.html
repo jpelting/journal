@@ -1,0 +1,17 @@
+{% extends "entries/base.html" %}
+{% block title %}{{ community.name }} - The Wax Tablet{% endblock %}
+{% block content %}
+    <p><a href="{% url 'entries:community-list' %}">&laquo; Back to Community</a></p>
+    <div class="checkin-header">
+        <h1>{{ community.name }}</h1>
+    </div>
+
+    <section class="part">
+        <p class="helptext">Before you can participate in this community, please review and accept the Community User Agreement.</p>
+        {% include "entries/_community_user_agreement_body.html" %}
+        <form method="post" action="{% url 'entries:community-accept-user-agreement' community.pk %}">
+            {% csrf_token %}
+            <p class="form-actions"><button type="submit" class="btn">I agree</button></p>
+        </form>
+    </section>
+{% endblock %}

@@ -23,6 +23,7 @@
 
         <section class="part">
             <h2>How are you doing this morning?</h2>
+            <p class="helptext">Take a moment to reflect on how you're feeling right now, then set each slider to where you honestly are &mdash; physically, mentally, emotionally, and spiritually.</p>
             {% for field in form %}
                 {% if field.name in "morning_mental_score,morning_physical_score,morning_emotional_score,morning_spiritual_score" %}
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -33,6 +34,7 @@
                     {{ field.errors }}
                 {% endif %}
             {% endfor %}
+            <p class="helptext">These scores color that day on your Calendar heat map, so you can see your trends at a glance.</p>
         </section>
 
         <section class="part">

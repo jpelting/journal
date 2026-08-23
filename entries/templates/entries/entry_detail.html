@@ -1,7 +1,9 @@
 {% extends "entries/base.html" %}
 {% block title %}{{ entry.date }} - The Wax Tablet{% endblock %}
 {% block content %}
-    <h1>{{ entry.date }}</h1>
+    <div class="checkin-header">
+        <h1>{{ entry.date }}</h1>
+    </div>
     <p>
         <a href="{% url 'entries:edit' entry.pk %}">Edit this entry</a> &middot;
         <a href="{% url 'entries:export-pdf' %}?ids={{ entry.pk }}">Download PDF</a>

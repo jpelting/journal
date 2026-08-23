@@ -30,18 +30,25 @@ from .forms import (
     AccessRequestForm,
     AccountProfileForm,
     AccountUserForm,
+    AddMemberForm,
+    CommunityForm,
+    CommunityPrayerSettingsForm,
     EntryForm,
     EveningCheckInForm,
     FeedbackForm,
     GoalCompletionFormSet,
     GoalFormSet,
+    JoinCommunityForm,
     MomentCheckInForm,
     MorningCheckInForm,
     NotificationSettingsForm,
+    PrayerRequestForm,
     SurveyForm,
 )
 from .models import (
     AccessRequest,
+    Community,
+    CommunityMembership,
     DevotionalPrompt,
     Entry,
     Feedback,
@@ -55,6 +62,7 @@ from .models import (
     StoicPrompt,
     SurveyResponse,
 )
+from .prayer import purge_expired_prayer_requests, send_due_prayer_digests, send_immediate_prayer_notification
 from .weather import (
     get_current_weather,
     get_tomorrow_forecast,
@@ -237,13 +245,19 @@ def send_due_notifications_view(request):
     """Cron target: POST /internal/send-due-quote-notifications/, hit every few minutes by
     the GitHub Actions workflow (see .github/workflows/send-quote-notifications.yml) since
     this app has no in-process scheduler and the Fly machine auto-stops when idle. Not a
-    Django-session endpoint - authenticated by a shared secret instead."""
+    Django-session endpoint - authenticated by a shared secret instead. Also drives the
+    community prayer-request digest send and purge on the same tick (see entries/prayer.py) -
+    piggybacking here avoids a second every-5-minutes cron workflow/secret."""
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
     if not token or not hmac.compare_digest(token, settings.CRON_SECRET):
         return HttpResponseForbidden()
     sent = send_due_notifications()
-    return JsonResponse({"sent": sent})
+    prayer_digests_sent = send_due_prayer_digests()
+    prayer_requests_purged = purge_expired_prayer_requests()
+    return JsonResponse(
+        {"sent": sent, "prayer_digests_sent": prayer_digests_sent, "prayer_requests_purged": prayer_requests_purged}
+    )
 
 
 @login_not_required
@@ -336,6 +350,216 @@ def _notify_admin_of_feedback(request, feedback):
     subject = render_to_string("entries/feedback_admin_subject.txt", context).strip()
     body = render_to_string("entries/feedback_admin_email.txt", context)
     send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [settings.ADMIN_EMAIL])
+
+
+def _community_list_context(request, **overrides):
+    active_community_ids = CommunityMembership.objects.filter(user=request.user, status="active").values_list(
+        "community_id", flat=True
+    )
+    context = {
+        "communities": Community.objects.filter(pk__in=active_community_ids).order_by("name"),
+        "pending_requests": CommunityMembership.objects.filter(user=request.user, status="pending")
+        .select_related("community")
+        .order_by("joined_at"),
+        "create_form": CommunityForm(),
+        "join_form": JoinCommunityForm(user=request.user),
+    }
+    context.update(overrides)
+    return context
+
+
+def community_list_view(request):
+    return render(request, "entries/community_list.html", _community_list_context(request))
+
+
+def community_admin_agreement_view(request):
+    return render(request, "entries/community_admin_agreement.html")
+
+
+def community_user_agreement_view(request):
+    return render(request, "entries/community_user_agreement.html")
+
+
+@require_POST
+def community_create_view(request):
+    form = CommunityForm(request.POST)
+    if form.is_valid():
+        community = form.save(commit=False)
+        community.created_by = request.user
+        community.admin_agreement_accepted_at = timezone.now()
+        community.save()
+        CommunityMembership.objects.create(
+            community=community, user=request.user, status="active", user_agreement_accepted_at=timezone.now()
+        )
+        messages.success(request, f'"{community.name}" created — share its invite code to bring others in.')
+        return redirect(community.get_absolute_url())
+    return render(
+        request, "entries/community_list.html", _community_list_context(request, create_form=form, create_open=True)
+    )
+
+
+@require_POST
+def community_join_view(request):
+    form = JoinCommunityForm(request.POST, user=request.user)
+    if form.is_valid():
+        community = form.cleaned_data["community"]
+        membership, created = CommunityMembership.objects.get_or_create(
+            community=community,
+            user=request.user,
+            defaults={"status": "pending", "user_agreement_accepted_at": timezone.now()},
+        )
+        if created:
+            messages.success(request, f'Request sent to join "{community.name}" — waiting on admin approval.')
+            _notify_admin_of_join_request(request, membership)
+        elif membership.status == "pending":
+            messages.info(request, f'Your request to join "{community.name}" is still awaiting approval.')
+        else:
+            messages.info(request, f'You\'re already a member of "{community.name}".')
+        return redirect("entries:community-list")
+    return render(
+        request, "entries/community_list.html", _community_list_context(request, join_form=form, join_open=True)
+    )
+
+
+def _notify_admin_of_join_request(request, membership):
+    community = membership.community
+    admin_email = community.created_by.email
+    if not admin_email:
+        return
+    context = {
+        "membership": membership,
+        "community": community,
+        "community_url": request.build_absolute_uri(community.get_absolute_url()),
+    }
+    subject = render_to_string("entries/community_join_request_admin_subject.txt", context).strip()
+    body = render_to_string("entries/community_join_request_admin_email.txt", context)
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [admin_email])
+
+
+def community_detail_view(request, pk):
+    community = get_object_or_404(request.user.communities, pk=pk)
+    membership = community.memberships.get(user=request.user)
+    if membership.status != "active":
+        messages.info(request, f'Your request to join "{community.name}" is still awaiting approval.')
+        return redirect("entries:community-list")
+    if not membership.user_agreement_accepted_at:
+        return render(request, "entries/community_agreement_gate.html", {"community": community})
+
+    is_admin = community.is_admin(request.user)
+    context = {
+        "community": community,
+        "is_admin": is_admin,
+        "memberships": community.memberships.filter(status="active").select_related("user").order_by("joined_at"),
+    }
+    if is_admin:
+        context["pending_memberships"] = (
+            community.memberships.filter(status="pending").select_related("user").order_by("joined_at")
+        )
+        context["add_member_form"] = AddMemberForm()
+        context["prayer_settings_form"] = CommunityPrayerSettingsForm(instance=community)
+    return render(request, "entries/community_detail.html", context)
+
+
+@require_POST
+def community_accept_user_agreement_view(request, pk):
+    community = get_object_or_404(request.user.communities, pk=pk)
+    membership = community.memberships.get(user=request.user)
+    membership.user_agreement_accepted_at = timezone.now()
+    membership.save(update_fields=["user_agreement_accepted_at"])
+    return redirect(community.get_absolute_url())
+
+
+@require_POST
+def community_leave_view(request, pk):
+    community = get_object_or_404(request.user.communities, pk=pk)
+    membership = community.memberships.get(user=request.user)
+    was_pending = membership.status == "pending"
+    membership.delete()
+    if was_pending:
+        messages.success(request, f'Your request to join "{community.name}" was canceled.')
+    else:
+        messages.success(request, f'You left "{community.name}".')
+    return redirect("entries:community-list")
+
+
+@require_POST
+def community_approve_view(request, pk, membership_id):
+    community = get_object_or_404(Community, pk=pk, created_by=request.user)
+    membership = get_object_or_404(community.memberships, pk=membership_id, status="pending")
+    membership.status = "active"
+    membership.save(update_fields=["status"])
+    messages.success(request, f'Approved "{membership.user.username}" into "{community.name}".')
+    return redirect(community.get_absolute_url())
+
+
+@require_POST
+def community_reject_view(request, pk, membership_id):
+    community = get_object_or_404(Community, pk=pk, created_by=request.user)
+    membership = get_object_or_404(community.memberships, pk=membership_id, status="pending")
+    messages.info(request, f'Declined "{membership.user.username}"\'s request to join "{community.name}".')
+    membership.delete()
+    return redirect(community.get_absolute_url())
+
+
+@require_POST
+def community_add_member_view(request, pk):
+    community = get_object_or_404(Community, pk=pk, created_by=request.user)
+    form = AddMemberForm(request.POST)
+    if form.is_valid():
+        user = form.user
+        membership, created = CommunityMembership.objects.get_or_create(
+            community=community, user=user, defaults={"status": "active"}
+        )
+        if created:
+            messages.success(request, f'Added "{user.username}" to "{community.name}".')
+        elif membership.status == "pending":
+            membership.status = "active"
+            membership.save(update_fields=["status"])
+            messages.success(request, f'Approved "{user.username}" into "{community.name}".')
+        else:
+            messages.info(request, f'"{user.username}" is already a member.')
+    else:
+        messages.error(request, "; ".join(form.errors.get("username", [])) or "Could not add that user.")
+    return redirect(community.get_absolute_url())
+
+
+@require_POST
+def community_prayer_settings_view(request, pk):
+    community = get_object_or_404(Community, pk=pk, created_by=request.user)
+    form = CommunityPrayerSettingsForm(request.POST, instance=community)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Prayer digest time updated.")
+    else:
+        messages.error(request, "Could not update the prayer digest time.")
+    return redirect(community.get_absolute_url())
+
+
+def _safe_next_url(request):
+    next_url = request.POST.get("next", "")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return next_url
+    return reverse("entries:checkin")
+
+
+@require_POST
+def prayer_request_create_view(request):
+    next_url = _safe_next_url(request)
+    form = PrayerRequestForm(request.POST, user=request.user)
+    if form.is_valid():
+        prayer_request = form.save()
+        if prayer_request.request_type == "immediate":
+            send_immediate_prayer_notification(prayer_request)
+            messages.success(request, f'Immediate prayer request sent to "{prayer_request.community.name}".')
+        else:
+            messages.success(
+                request, f'Prayer request saved — it will go out in "{prayer_request.community.name}"\'s next digest.'
+            )
+    else:
+        messages.error(request, "; ".join(form.non_field_errors()) or "Could not submit that prayer request.")
+    return redirect(next_url)
 
 
 def _next_stoic_prompt(user):
@@ -511,21 +735,38 @@ MOOD_MAX_SATURATION = 75
 MOOD_LIGHTNESS = 78
 
 
-def _mood_color(entry):
-    dimension_scores = [
-        entry.mental_score,
-        entry.physical_score,
-        entry.emotional_score,
-        entry.spiritual_score,
-    ]
+CALENDAR_METRICS = {
+    "overall": ("Overall", None),
+    "physical": ("Physical", "physical_score"),
+    "mental": ("Mental", "mental_score"),
+    "emotional": ("Emotional", "emotional_score"),
+    "spiritual": ("Spiritual", "spiritual_score"),
+}
+DEFAULT_CALENDAR_METRIC = "overall"
+
+
+def _mood_color(entry, metric=DEFAULT_CALENDAR_METRIC):
+    _, field = CALENDAR_METRICS.get(metric, CALENDAR_METRICS[DEFAULT_CALENDAR_METRIC])
+    if field is None:
+        dimension_scores = [
+            entry.mental_score,
+            entry.physical_score,
+            entry.emotional_score,
+            entry.spiritual_score,
+        ]
+    else:
+        dimension_scores = [getattr(entry, field)]
     present = [s for s in dimension_scores if s is not None]
     if not present:
         return None
     avg = sum(present) / len(present)
     hue = next(hue for ceiling, hue in MOOD_BANDS if avg <= ceiling)
-    saturation = MOOD_MIN_SATURATION + (MOOD_MAX_SATURATION - MOOD_MIN_SATURATION) * (
-        len(present) - 1
-    ) / (len(dimension_scores) - 1)
+    if len(dimension_scores) > 1:
+        saturation = MOOD_MIN_SATURATION + (MOOD_MAX_SATURATION - MOOD_MIN_SATURATION) * (
+            len(present) - 1
+        ) / (len(dimension_scores) - 1)
+    else:
+        saturation = MOOD_MAX_SATURATION
     return f"hsl({hue}, {saturation:.0f}%, {MOOD_LIGHTNESS}%)"
 
 
@@ -533,6 +774,10 @@ def calendar_view(request, year=None, month=None):
     today = timezone.localdate()
     year = year or today.year
     month = month or today.month
+
+    metric = request.GET.get("metric", DEFAULT_CALENDAR_METRIC)
+    if metric not in CALENDAR_METRICS:
+        metric = DEFAULT_CALENDAR_METRIC
 
     prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
     next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
@@ -558,7 +803,7 @@ def calendar_view(request, year=None, month=None):
                     "date": date(year, month, day),
                     "entry": entry,
                     "is_today": date(year, month, day) == today,
-                    "bg_color": _mood_color(entry) if entry else None,
+                    "bg_color": _mood_color(entry, metric) if entry else None,
                 }
             )
         weeks.append(week_days)
@@ -573,6 +818,8 @@ def calendar_view(request, year=None, month=None):
         "prev_month": prev_month,
         "next_year": next_year,
         "next_month": next_month,
+        "metric": metric,
+        "metric_choices": [(key, label) for key, (label, _) in CALENDAR_METRICS.items()],
     }
     return render(request, "entries/calendar.html", context)
 
@@ -604,6 +851,31 @@ def _daily_affirmation_for(user, slot):
     if not enabled:
         return None
     return SelfAffirmation.for_date(timezone.localdate(), slot=slot)
+
+
+def _prayer_request_context(user):
+    """Shared across the three check-in tabs (_checkin_tabs.html): the "Prayer Request" button
+    only shows when the user belongs to at least one active community whose Community User
+    Agreement they've accepted (community_detail_view gates on this same field, prompting
+    acceptance before a member can otherwise participate). community_prayer_lists backs the
+    "Current community prayer request" listing modal - every not-yet-purged request (immediate
+    or scheduled) for each of the user's communities."""
+    communities = Community.objects.filter(
+        memberships__user=user, memberships__status="active", memberships__user_agreement_accepted_at__isnull=False
+    ).order_by("name")
+    if not communities:
+        return {}
+    return {
+        "prayer_request_communities": communities,
+        "prayer_request_form": PrayerRequestForm(user=user),
+        "community_prayer_lists": [
+            {
+                "community": community,
+                "prayer_requests": community.prayer_requests.select_related("user").order_by("-created_at"),
+            }
+            for community in communities
+        ],
+    }
 
 
 def _checkin_availability(now):
@@ -672,6 +944,7 @@ def checkin_morning_view(request):
             "daily_affirmation": _daily_affirmation_for(request.user, slot=1),
             "show_entry_saved_modal": request.GET.get("saved") == "1",
             "entry_saved_label": "morning check-in",
+            **_prayer_request_context(request.user),
         },
     )
 
@@ -723,6 +996,7 @@ def checkin_evening_view(request):
             "daily_affirmation": _daily_affirmation_for(request.user, slot=2),
             "show_entry_saved_modal": request.GET.get("saved") == "1",
             "entry_saved_label": "evening check-in",
+            **_prayer_request_context(request.user),
         },
     )
 
@@ -755,6 +1029,7 @@ def checkin_moment_view(request):
             "morning_available": morning_available,
             "evening_available": evening_available,
             "today_prayer": Prayer.for_date(timezone.localdate()),
+            **_prayer_request_context(request.user),
         },
     )
 

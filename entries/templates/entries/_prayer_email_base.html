@@ -1,0 +1,37 @@
+{% autoescape on %}<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}The Wax Tablet{% endblock %}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f1ea; font-family:Georgia,'Times New Roman',serif; color:#2b2620;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea; padding:24px 12px;">
+<tr>
+<td align="center">
+<table role="presentation" width="100%" style="max-width:560px; background-color:#ffffff; border:1px solid #e2dcc8; border-radius:8px;" cellpadding="0" cellspacing="0">
+<tr>
+<td style="background-color:#1a1a1a; padding:18px 28px; border-radius:8px 8px 0 0;">
+<span style="display:inline-block; width:26px; height:26px; line-height:26px; text-align:center; border-radius:50%; background-color:#c68b45; color:#1a1a1a; font-weight:bold; font-family:Georgia,serif; font-size:13px; vertical-align:middle;">WT</span>
+<span style="color:#eae5d9; font-size:17px; font-weight:bold; letter-spacing:0.04em; vertical-align:middle; padding-left:10px;">The Wax Tablet</span>
+</td>
+</tr>
+<tr>
+<td style="padding:28px;">
+<h1 style="margin:0 0 4px; font-size:20px; color:#2b2620;">{% block heading %}{% endblock %}</h1>
+<p style="margin:0 0 22px; font-size:12px; color:#8c8878; text-transform:uppercase; letter-spacing:0.06em;">{{ community.name }}</p>
+{% block content %}{% endblock %}
+</td>
+</tr>
+<tr>
+<td style="padding:14px 28px; background-color:#f9f7f1; border-top:1px solid #e2dcc8; border-radius:0 0 8px 8px;">
+<p style="margin:0; font-size:12px; color:#8c8878;">Sent by The Wax Tablet on behalf of {{ community.name }}.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
+{% endautoescape %}

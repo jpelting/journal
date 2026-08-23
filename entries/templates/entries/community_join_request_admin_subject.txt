@@ -1,0 +1,1 @@
+{% autoescape off %}[{{ community.name }}] {{ membership.user.username }} requested to join{% endautoescape %}

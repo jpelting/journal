@@ -2,8 +2,10 @@
 {% block title %}In the Moment - The Wax Tablet{% endblock %}
 {% block content %}
     {% include "entries/_checkin_tabs.html" with active_tab="moment" %}
-    <h1>In the Moment</h1>
-    <p class="checkin-meta">{{ now|date:"l, F j" }} &middot; {{ now|date:"g:i A" }}</p>
+    <div class="checkin-header">
+        <h1>In the Moment</h1>
+        <p class="checkin-meta">{{ now|date:"l, F j" }} &middot; {{ now|date:"g:i A" }}</p>
+    </div>
 
     <form method="post" novalidate>
         {% csrf_token %}

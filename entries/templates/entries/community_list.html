@@ -1,0 +1,121 @@
+{% extends "entries/base.html" %}
+{% block title %}Community - The Wax Tablet{% endblock %}
+{% block content %}
+    <div class="checkin-header">
+        <h1>Community</h1>
+    </div>
+
+    <p class="form-actions">
+        <button type="button" class="btn" id="create-community-btn">Create a Community</button>
+        <button type="button" class="btn" id="join-community-btn">Join a Community</button>
+    </p>
+
+    <section class="part">
+        <h2>Your communities</h2>
+        {% if communities %}
+            <ul class="entry-list">
+                {% for community in communities %}
+                    <li>
+                        <a href="{{ community.get_absolute_url }}"><strong>{{ community.name }}</strong></a>
+                        {% if community.description %}<div class="scores">{{ community.description|truncatewords:20 }}</div>{% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="helptext">You're not in any communities yet — create one or join with an invite code.</p>
+        {% endif %}
+    </section>
+
+    {% if pending_requests %}
+        <section class="part">
+            <h2>Pending requests</h2>
+            <p class="helptext">Waiting on the community admin to approve.</p>
+            <ul class="entry-list">
+                {% for membership in pending_requests %}
+                    <li>
+                        <strong>{{ membership.community.name }}</strong>
+                        <form method="post" action="{% url 'entries:community-leave' membership.community.pk %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary">Cancel request</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    <div class="modal-backdrop" id="create-community-modal-backdrop" {% if not create_open %}hidden{% endif %}>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="create-community-modal-close" aria-label="Close">&times;</button>
+            <h2>Create a Community</h2>
+            <p class="helptext">You'll get an invite code to share with anyone you want to join.</p>
+            <form method="post" action="{% url 'entries:community-create' %}" novalidate>
+                {% csrf_token %}
+                {{ create_form.non_field_errors }}
+
+                <label for="{{ create_form.name.id_for_label }}">Name</label>
+                {{ create_form.name }}
+                {{ create_form.name.errors }}
+
+                <label for="{{ create_form.description.id_for_label }}">Description</label>
+                {{ create_form.description }}
+                {{ create_form.description.errors }}
+
+                <p class="helptext"><a href="{% url 'entries:community-admin-agreement' %}" target="_blank" rel="noopener">Read the Community Admin Agreement</a></p>
+                <label class="checkbox-field"><input type="checkbox" name="agree_to_admin_terms" id="{{ create_form.agree_to_admin_terms.id_for_label }}" required> {{ create_form.agree_to_admin_terms.label }}</label>
+                {{ create_form.agree_to_admin_terms.errors }}
+
+                <p class="form-actions"><button class="btn" type="submit">Create community</button></p>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="join-community-modal-backdrop" {% if not join_open %}hidden{% endif %}>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="join-community-modal-close" aria-label="Close">&times;</button>
+            <h2>Join a Community</h2>
+            <form method="post" action="{% url 'entries:community-join' %}" novalidate>
+                {% csrf_token %}
+                {{ join_form.non_field_errors }}
+
+                <label for="{{ join_form.community.id_for_label }}">Community</label>
+                {{ join_form.community }}
+                {{ join_form.community.errors }}
+
+                <label for="{{ join_form.invite_code.id_for_label }}">Invite code</label>
+                {{ join_form.invite_code }}
+                {{ join_form.invite_code.errors }}
+
+                <p class="helptext"><a href="{% url 'entries:community-user-agreement' %}" target="_blank" rel="noopener">Read the Community User Agreement</a></p>
+                <label class="checkbox-field"><input type="checkbox" name="agree_to_user_terms" id="{{ join_form.agree_to_user_terms.id_for_label }}" required> {{ join_form.agree_to_user_terms.label }}</label>
+                {{ join_form.agree_to_user_terms.errors }}
+
+                <p class="form-actions"><button class="btn" type="submit">Request access</button></p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            function wireModal(buttonId, backdropId, closeId) {
+                var button = document.getElementById(buttonId);
+                var backdrop = document.getElementById(backdropId);
+
+                function openModal() { backdrop.hidden = false; }
+                function closeModal() { backdrop.hidden = true; }
+
+                button.addEventListener("click", openModal);
+                document.getElementById(closeId).addEventListener("click", closeModal);
+                backdrop.addEventListener("click", function (event) {
+                    if (event.target === backdrop) closeModal();
+                });
+                document.addEventListener("keydown", function (event) {
+                    if (event.key === "Escape" && !backdrop.hidden) closeModal();
+                });
+            }
+
+            wireModal("create-community-btn", "create-community-modal-backdrop", "create-community-modal-close");
+            wireModal("join-community-btn", "join-community-modal-backdrop", "join-community-modal-close");
+        })();
+    </script>
+{% endblock %}

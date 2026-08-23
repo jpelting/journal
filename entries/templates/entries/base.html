@@ -176,6 +176,24 @@
         }
         .prompt { font-style: italic; color: var(--accent); margin-top: 0.25rem; }
         .helptext { font-size: 0.85rem; color: var(--text-muted); }
+        .invite-code { font-size: 1.4rem; letter-spacing: 0.2rem; background: var(--surface-alt, rgba(198, 139, 69, 0.12)); border: 1px solid var(--border-subtle); border-radius: 0.4rem; padding: 0.4rem 0.8rem; display: inline-block; }
+        #prayer-digest-time-display { cursor: pointer; }
+        .clock-picker { max-width: 260px; margin: 0 auto; text-align: center; }
+        .clock-picker-readout { font-family: 'Cinzel', serif; font-size: 1.75rem; color: var(--text); margin: 0 0 0.75rem; }
+        .clock-readout-part { cursor: pointer; padding: 0.1rem 0.35rem; border-radius: 4px; }
+        .clock-readout-part.active { color: var(--accent); background: rgba(198, 139, 69, 0.15); }
+        .clock-picker-ampm { display: inline-flex; gap: 0.3rem; margin-left: 0.75rem; vertical-align: middle; }
+        .clock-picker-ampm button { font-family: inherit; font-size: 0.75rem; font-weight: bold; padding: 0.25rem 0.55rem; border-radius: 4px; border: 1px solid var(--border-subtle); background: var(--surface); color: var(--text-muted); cursor: pointer; }
+        .clock-picker-ampm button.active { border-color: var(--accent); color: var(--accent); }
+        .clock-face-circle { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+        .clock-hand { stroke: var(--accent); stroke-width: 2; }
+        .clock-center-dot { fill: var(--accent); }
+        .clock-mark { cursor: pointer; }
+        .clock-mark circle { fill: transparent; transition: fill 0.1s ease; }
+        .clock-mark text { fill: var(--text); font-size: 13px; text-anchor: middle; dominant-baseline: central; font-family: inherit; pointer-events: none; }
+        .clock-mark:hover circle { fill: rgba(198, 139, 69, 0.15); }
+        .clock-mark.selected circle { fill: var(--accent); }
+        .clock-mark.selected text { fill: var(--accent-contrast); }
         .daily-quote { text-align: center; }
         .daily-quote-text { font-family: 'Cinzel', serif; font-size: 1.15rem; font-style: italic; color: var(--text); margin: 0 0 0.5rem; }
         .daily-quote-author { font-size: 0.9rem; color: var(--accent); margin: 0; }
@@ -281,6 +299,14 @@
             transition: border-color 0.15s ease;
         }
         .checkin-tabs .btn-prayer:hover { border-color: var(--accent); }
+        .prayer-request-fields { display: flex; gap: 1rem; align-items: flex-start; }
+        .prayer-request-text { flex: 1; min-width: 0; }
+        .prayer-request-text textarea { width: 100%; }
+        .prayer-request-checks { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1.75rem; white-space: nowrap; }
+        .checkbox-field, .prayer-request-check { display: flex; align-items: center; gap: 0.4rem; font-weight: normal; }
+        .checkbox-field input[type=checkbox], .prayer-request-check input[type=checkbox] { width: auto; margin: 0; }
+        .prayer-request-anonymous { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle); }
+        .prayer-request-chooser-actions { flex-direction: column; align-items: stretch; }
         .tab-section { display: none; }
         .tab-section.active { display: block; }
         .checkin-header { text-align: center; margin-bottom: 1.5rem; }
@@ -530,9 +556,9 @@
         <a href="{% url 'entries:checkin' %}">Check-in</a>
         <a href="{% url 'entries:list' %}">Journals</a>
         <a href="{% url 'entries:calendar' %}">Calendar</a>
-        <a href="{% url 'entries:export' %}">Export</a>
+        <a href="{% url 'entries:community-list' %}">Community</a>
         <a href="{% url 'entries:feedback' %}">Feedback</a>
-        <a href="/admin/">Admin</a>
+        {% if user.is_superuser %}<a href="/admin/">Admin</a>{% endif %}
         <a href="{% url 'entries:account' %}" class="nav-user">{{ user.username }}</a>
         <form action="{% url 'logout' %}" method="post" class="logout-form">
             {% csrf_token %}

@@ -1,0 +1,15 @@
+{% extends "entries/base.html" %}
+{% block title %}Your Quote - The Wax Tablet{% endblock %}
+{% block content %}
+    <div class="checkin-header">
+        <h1>Your Quote</h1>
+    </div>
+    {% if quote %}
+        <section class="part daily-quote">
+            <p class="daily-quote-text">&ldquo;{{ quote.text }}&rdquo;</p>
+            <p class="daily-quote-author">&mdash; {{ quote.author }}</p>
+        </section>
+    {% else %}
+        <p class="helptext">No quote found for today.</p>
+    {% endif %}
+{% endblock %}

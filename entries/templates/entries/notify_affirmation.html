@@ -1,0 +1,14 @@
+{% extends "entries/base.html" %}
+{% block title %}Your Affirmation - The Wax Tablet{% endblock %}
+{% block content %}
+    <div class="checkin-header">
+        <h1>Your Affirmation</h1>
+    </div>
+    {% if affirmation %}
+        <section class="part daily-affirmation">
+            <p class="daily-affirmation-text">{{ affirmation.text }}</p>
+        </section>
+    {% else %}
+        <p class="helptext">No affirmation found for today.</p>
+    {% endif %}
+{% endblock %}

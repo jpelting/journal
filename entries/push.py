@@ -13,8 +13,13 @@ from .weather import weather_location_for_user
 logger = logging.getLogger(__name__)
 
 
-def send_to_subscription(subscription, title, body):
+def send_to_subscription(subscription, title, body, url="/"):
     """Best-effort push send to one PushSubscription; never raises.
+
+    `url` is where the notification takes the user on click (see sw.js's
+    notificationclick handler) - defaults to the app root, but callers pass a more
+    specific page (e.g. /notify/quote/?slot=1) so clicking the notification lands
+    directly on the content it was about, not just the general check-in page.
 
     Prunes the subscription on a 404/410 (push service says the endpoint is
     gone - browser uninstalled, notification permission revoked, etc.),
@@ -26,7 +31,7 @@ def send_to_subscription(subscription, title, body):
                 "endpoint": subscription.endpoint,
                 "keys": {"p256dh": subscription.p256dh, "auth": subscription.auth},
             },
-            data=json.dumps({"title": title, "body": body}),
+            data=json.dumps({"title": title, "body": body, "url": url}),
             vapid_private_key=settings.VAPID_PRIVATE_KEY,
             vapid_claims={"sub": settings.VAPID_CLAIM_EMAIL},
         )
@@ -58,7 +63,7 @@ def _slot_due(now_local, quote_time, last_sent_date, today_local):
     return now_local.time() >= quote_time
 
 
-def _send_due_slot(profile, subscriptions, now_local, today_local, *, enabled, send_time, last_sent_field, slot, title, get_content, format_body):
+def _send_due_slot(profile, subscriptions, now_local, today_local, *, enabled, send_time, last_sent_field, slot, title, get_content, format_body, url):
     """Shared due-check/send/dedupe logic for one morning-or-evening slot of one
     notification kind (quote or affirmation). Returns True if a push went out."""
     if not enabled:
@@ -73,7 +78,7 @@ def _send_due_slot(profile, subscriptions, now_local, today_local, *, enabled, s
 
     body = format_body(content)
     for subscription in subscriptions:
-        send_to_subscription(subscription, title, body)
+        send_to_subscription(subscription, title, body, url=url)
     setattr(profile, last_sent_field, today_local)
     profile.save(update_fields=[last_sent_field])
     return True
@@ -116,6 +121,7 @@ def send_due_notifications():
                     enabled=enabled, send_time=send_time, last_sent_field=last_sent_field, slot=slot, title=title,
                     get_content=lambda d, s: MotivationalQuote.for_date(d, slot=s),
                     format_body=lambda quote: f"{quote.text} — {quote.author}",
+                    url=f"/notify/quote/?slot={slot}",
                 ):
                     sent += 1
 
@@ -129,6 +135,7 @@ def send_due_notifications():
                     enabled=enabled, send_time=send_time, last_sent_field=last_sent_field, slot=slot, title=title,
                     get_content=lambda d, s: SelfAffirmation.for_date(d, slot=s),
                     format_body=lambda affirmation: affirmation.text,
+                    url=f"/notify/affirmation/?slot={slot}",
                 ):
                     sent += 1
 

@@ -18,16 +18,19 @@ self.addEventListener('push', function (event) {
     }
     var title = data.title || 'The Wax Tablet';
     var body = data.body || '';
+    var url = data.url || '/';
     event.waitUntil(
         self.registration.showNotification(title, {
             body: body,
             icon: '/static/entries/icons/icon-192.png',
             badge: '/static/entries/icons/icon-192.png',
+            data: { url: url },
         })
     );
 });
 
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
-    event.waitUntil(self.clients.openWindow('/'));
+    var url = (event.notification.data && event.notification.data.url) || '/';
+    event.waitUntil(self.clients.openWindow(url));
 });

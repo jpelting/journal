@@ -57,6 +57,7 @@ from .models import (
     MomentCheckIn,
     MotivationalQuote,
     Prayer,
+    PrayerRequest,
     Profile,
     PushSubscription,
     SelfAffirmation,
@@ -266,6 +267,37 @@ def service_worker_view(request):
     """Serves the service worker JS at the origin root (not under /static/) so its default
     scope is "/" and it can receive push events regardless of which page is open."""
     return render(request, "entries/sw.js", content_type="application/javascript")
+
+
+def notify_quote_view(request):
+    """Landing page for a clicked motivational-quote push notification (see
+    entries/push.py's url=f"/notify/quote/?slot={slot}") - shows just that quote,
+    nothing else."""
+    slot = 2 if request.GET.get("slot") == "2" else 1
+    return render(
+        request, "entries/notify_quote.html", {"quote": MotivationalQuote.for_date(timezone.localdate(), slot=slot)}
+    )
+
+
+def notify_affirmation_view(request):
+    """Landing page for a clicked affirmation push notification - shows just that
+    affirmation, nothing else."""
+    slot = 2 if request.GET.get("slot") == "2" else 1
+    return render(
+        request,
+        "entries/notify_affirmation.html",
+        {"affirmation": SelfAffirmation.for_date(timezone.localdate(), slot=slot)},
+    )
+
+
+def notify_prayer_request_view(request, pk):
+    """Landing page for a clicked immediate-prayer-request push notification - shows just
+    that one request. 404s for anyone not an active member of its community (the request
+    may also already be gone if the community's digest+purge cycle ran before it was clicked)."""
+    prayer_request = get_object_or_404(PrayerRequest, pk=pk)
+    if not prayer_request.community.memberships.filter(user=request.user, status="active").exists():
+        raise Http404
+    return render(request, "entries/notify_prayer_request.html", {"prayer_request": prayer_request})
 
 
 def account_delete_view(request):

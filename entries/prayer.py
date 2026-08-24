@@ -31,10 +31,10 @@ def _send_email(users, subject_template, text_template, context):
     message.send()
 
 
-def _send_push_to_members(users, title, body):
+def _send_push_to_members(users, title, body, url="/"):
     for user in users:
         for subscription in user.push_subscriptions.all():
-            send_to_subscription(subscription, title, body)
+            send_to_subscription(subscription, title, body, url=url)
 
 
 def send_immediate_prayer_notification(prayer_request):
@@ -51,6 +51,7 @@ def send_immediate_prayer_notification(prayer_request):
         users,
         "Immediate Prayer Request",
         f'An immediate prayer request has been shared in "{community.name}".',
+        url=f"/notify/prayer-request/{prayer_request.pk}/",
     )
     prayer_request.immediate_sent_at = timezone.now()
     prayer_request.save(update_fields=["immediate_sent_at"])

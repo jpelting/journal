@@ -54,6 +54,9 @@ urlpatterns = [
     path("survey/", views.survey_view, name="survey"),
     path("survey/decline/", views.survey_decline_view, name="survey-decline"),
     path("sw.js", views.service_worker_view, name="service-worker"),
+    path("notify/quote/", views.notify_quote_view, name="notify-quote"),
+    path("notify/affirmation/", views.notify_affirmation_view, name="notify-affirmation"),
+    path("notify/prayer-request/<int:pk>/", views.notify_prayer_request_view, name="notify-prayer-request"),
     path("push/subscribe/", views.push_subscribe_view, name="push-subscribe"),
     path("push/test/", views.push_test_view, name="push-test"),
     path(

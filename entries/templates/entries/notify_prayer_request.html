@@ -1,0 +1,13 @@
+{% extends "entries/base.html" %}
+{% block title %}Prayer Request - The Wax Tablet{% endblock %}
+{% block content %}
+    <p><a href="{{ prayer_request.community.get_absolute_url }}">&laquo; Back to {{ prayer_request.community.name }}</a></p>
+    <div class="checkin-header">
+        <h1>Prayer Request</h1>
+        <p class="checkin-meta">{{ prayer_request.community.name }}</p>
+    </div>
+    <section class="part">
+        <p><strong>{{ prayer_request.display_name }}</strong> shared an immediate prayer request:</p>
+        <div class="scores">{{ prayer_request.text|linebreaksbr }}</div>
+    </section>
+{% endblock %}

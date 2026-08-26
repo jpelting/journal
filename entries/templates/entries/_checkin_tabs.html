@@ -6,8 +6,18 @@
         <a href="{% url 'entries:checkin-evening' %}" class="{% if active_tab == 'evening' %}active{% endif %}">Evening Follow-up</a>
     {% endif %}
     <a href="{% url 'entries:checkin-moment' %}" class="{% if active_tab == 'moment' %}active{% endif %}">In the Moment</a>
-    {% if today_prayer %}
-        <button type="button" class="btn-prayer" id="prayer-button">Daily Prayer</button>
+    {% if today_prayer or daily_quote or daily_affirmation %}
+        <div class="checkin-tab-actions">
+            {% if today_prayer %}
+                <button type="button" class="btn-checkin-action" id="prayer-button">Daily Prayer</button>
+            {% endif %}
+            {% if daily_quote %}
+                <button type="button" class="btn-checkin-action" id="quote-button">Motivational Quote</button>
+            {% endif %}
+            {% if daily_affirmation %}
+                <button type="button" class="btn-checkin-action" id="affirmation-button">Affirmation</button>
+            {% endif %}
+        </div>
     {% endif %}
 </div>
 
@@ -25,21 +35,53 @@
             {% if today_prayer.attribution %}<p class="helptext">&mdash; {{ today_prayer.attribution }}</p>{% endif %}
         </div>
     </div>
+{% endif %}
+
+{% if daily_quote %}
+    <div class="modal-backdrop" id="quote-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="quote-modal-close" aria-label="Close">&times;</button>
+            <h2>Today's Quote</h2>
+            <p class="daily-quote-text">&ldquo;{{ daily_quote.text }}&rdquo;</p>
+            <p class="daily-quote-author">&mdash; {{ daily_quote.author }}</p>
+        </div>
+    </div>
+{% endif %}
+
+{% if daily_affirmation %}
+    <div class="modal-backdrop" id="affirmation-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="affirmation-modal-close" aria-label="Close">&times;</button>
+            <h2>Today's Affirmation</h2>
+            <p class="daily-affirmation-text">{{ daily_affirmation.text }}</p>
+        </div>
+    </div>
+{% endif %}
+
+{% if today_prayer or daily_quote or daily_affirmation %}
     <script>
         (function () {
-            var backdrop = document.getElementById("prayer-modal-backdrop");
+            function wireModal(buttonId, backdropId, closeId) {
+                var button = document.getElementById(buttonId);
+                var backdrop = document.getElementById(backdropId);
+                if (!button || !backdrop) return;
 
-            function openModal() { backdrop.hidden = false; }
-            function closeModal() { backdrop.hidden = true; }
+                function openModal() { backdrop.hidden = false; }
+                function closeModal() { backdrop.hidden = true; }
 
-            document.getElementById("prayer-button").addEventListener("click", openModal);
-            document.getElementById("prayer-modal-close").addEventListener("click", closeModal);
-            backdrop.addEventListener("click", function (event) {
-                if (event.target === backdrop) closeModal();
-            });
-            document.addEventListener("keydown", function (event) {
-                if (event.key === "Escape" && !backdrop.hidden) closeModal();
-            });
+                button.addEventListener("click", openModal);
+                document.getElementById(closeId).addEventListener("click", closeModal);
+                backdrop.addEventListener("click", function (event) {
+                    if (event.target === backdrop) closeModal();
+                });
+                document.addEventListener("keydown", function (event) {
+                    if (event.key === "Escape" && !backdrop.hidden) closeModal();
+                });
+            }
+
+            wireModal("prayer-button", "prayer-modal-backdrop", "prayer-modal-close");
+            wireModal("quote-button", "quote-modal-backdrop", "quote-modal-close");
+            wireModal("affirmation-button", "affirmation-modal-backdrop", "affirmation-modal-close");
         })();
     </script>
 {% endif %}

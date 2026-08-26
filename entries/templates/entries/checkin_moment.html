@@ -25,8 +25,106 @@
             {{ form.note }}
         </section>
 
-        <button class="btn" type="submit">Etch This Moment</button>
+        <section class="part" id="deep-dive-section" hidden>
+            <h2>The Five Whys</h2>
+            <p class="helptext">Keep asking why until you reach the root of it.</p>
+
+            <label for="{{ form.deep_dive_why_1.id_for_label }}">Why</label>
+            {{ form.deep_dive_why_1 }}
+
+            <label for="{{ form.deep_dive_why_2.id_for_label }}">Why</label>
+            {{ form.deep_dive_why_2 }}
+
+            <label for="{{ form.deep_dive_why_3.id_for_label }}">Why</label>
+            {{ form.deep_dive_why_3 }}
+
+            <label for="{{ form.deep_dive_why_4.id_for_label }}">Why</label>
+            {{ form.deep_dive_why_4 }}
+
+            <label for="{{ form.deep_dive_why_5.id_for_label }}">Why</label>
+            {{ form.deep_dive_why_5 }}
+        </section>
+
+        <p class="form-actions">
+            <button type="button" class="btn btn-secondary" id="deep-dive-button">Deep Dive</button>
+            <button class="btn" type="submit">Etch This Moment</button>
+        </p>
     </form>
+
+    <div class="modal-backdrop" id="deep-dive-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="deep-dive-modal-close" aria-label="Close">&times;</button>
+            <h2>Take a Breath</h2>
+            <p>Before you continue, pause for a moment and take a slow breath.</p>
+            <p>To find the true reason behind what you're feeling, we're going to ask &ldquo;Why&rdquo; five times &mdash; each answer digging a little deeper than the last.</p>
+            <p>This usually takes about 10&ndash;20 minutes to work through.</p>
+            <p class="form-actions">
+                <button type="button" class="btn btn-secondary" id="deep-dive-not-now-button">Not Now</button>
+                <button type="button" class="btn" id="deep-dive-yes-button">Yes, Let's Dive In</button>
+            </p>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="etch-confirm-modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+            <button type="button" class="modal-close" id="etch-confirm-modal-close" aria-label="Close">&times;</button>
+            <h2>Etch Your Entry?</h2>
+            <p>Would you like to etch what you've written so far?</p>
+            <p class="form-actions">
+                <button type="button" class="btn btn-secondary" id="etch-confirm-no-button">No, Keep Writing</button>
+                <button type="button" class="btn" id="etch-confirm-yes-button">Yes, Etch It</button>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var openButton = document.getElementById("deep-dive-button");
+            var backdrop = document.getElementById("deep-dive-modal-backdrop");
+            var closeButton = document.getElementById("deep-dive-modal-close");
+            var notNowButton = document.getElementById("deep-dive-not-now-button");
+            var yesButton = document.getElementById("deep-dive-yes-button");
+            var deepDiveSection = document.getElementById("deep-dive-section");
+            var etchForm = deepDiveSection.closest("form");
+
+            var etchBackdrop = document.getElementById("etch-confirm-modal-backdrop");
+            var etchCloseButton = document.getElementById("etch-confirm-modal-close");
+            var etchNoButton = document.getElementById("etch-confirm-no-button");
+            var etchYesButton = document.getElementById("etch-confirm-yes-button");
+
+            function openModal() { backdrop.hidden = false; }
+            function closeModal() { backdrop.hidden = true; }
+
+            function promptToEtch() {
+                closeModal();
+                etchBackdrop.hidden = false;
+            }
+
+            function closeEtchPrompt() { etchBackdrop.hidden = true; }
+
+            openButton.addEventListener("click", openModal);
+            yesButton.addEventListener("click", function () {
+                deepDiveSection.hidden = false;
+                closeModal();
+            });
+            notNowButton.addEventListener("click", promptToEtch);
+            closeButton.addEventListener("click", promptToEtch);
+            backdrop.addEventListener("click", function (event) {
+                if (event.target === backdrop) promptToEtch();
+            });
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape" && !backdrop.hidden) promptToEtch();
+                if (event.key === "Escape" && !etchBackdrop.hidden) closeEtchPrompt();
+            });
+
+            etchYesButton.addEventListener("click", function () { etchForm.submit(); });
+            etchNoButton.addEventListener("click", closeEtchPrompt);
+            etchCloseButton.addEventListener("click", closeEtchPrompt);
+            etchBackdrop.addEventListener("click", function (event) {
+                if (event.target === etchBackdrop) closeEtchPrompt();
+            });
+        })();
+    </script>
 
     {% if recent_moments %}
         <h2>Recent moments</h2>

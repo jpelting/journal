@@ -1069,6 +1069,11 @@ def checkin_moment_view(request):
                 emotions=",".join(form.cleaned_data["emotions"]),
                 note=form.cleaned_data["note"],
                 entry=Entry.objects.filter(user=request.user, date=timezone.localdate()).first(),
+                deep_dive_why_1=form.cleaned_data["deep_dive_why_1"],
+                deep_dive_why_2=form.cleaned_data["deep_dive_why_2"],
+                deep_dive_why_3=form.cleaned_data["deep_dive_why_3"],
+                deep_dive_why_4=form.cleaned_data["deep_dive_why_4"],
+                deep_dive_why_5=form.cleaned_data["deep_dive_why_5"],
             )
             return redirect("entries:checkin-moment")
     else:

@@ -405,6 +405,14 @@ class MomentCheckIn(models.Model):
     note = EncryptedTextField(blank=True, help_text="What are you feeling, and why?")
     entry = models.ForeignKey(Entry, related_name="moments", null=True, blank=True, on_delete=models.SET_NULL)
 
+    # Optional "Five Whys" deep dive, offered as an extra step past the initial note -
+    # each answer meant to dig past the previous one toward the root cause.
+    deep_dive_why_1 = EncryptedTextField(blank=True)
+    deep_dive_why_2 = EncryptedTextField(blank=True)
+    deep_dive_why_3 = EncryptedTextField(blank=True)
+    deep_dive_why_4 = EncryptedTextField(blank=True)
+    deep_dive_why_5 = EncryptedTextField(blank=True)
+
     class Meta:
         ordering = ["-created_at"]
 

@@ -116,6 +116,26 @@ class MultiUserIsolationTests(TestCase):
         self.assertIn("alice's moment", notes)
         self.assertNotIn("bob's moment", notes)
 
+    def test_moment_checkin_saves_deep_dive_whys(self):
+        self.client.force_login(self.user_a)
+        self.client.post(
+            reverse("entries:checkin-moment"),
+            data={
+                "emotions": [],
+                "note": "felt anxious",
+                "deep_dive_why_1": "because of the deadline",
+                "deep_dive_why_2": "because I procrastinated",
+                "deep_dive_why_3": "",
+                "deep_dive_why_4": "",
+                "deep_dive_why_5": "",
+            },
+        )
+        moment = MomentCheckIn.objects.filter(user=self.user_a).latest("created_at")
+        self.assertEqual(moment.note, "felt anxious")
+        self.assertEqual(moment.deep_dive_why_1, "because of the deadline")
+        self.assertEqual(moment.deep_dive_why_2, "because I procrastinated")
+        self.assertEqual(moment.deep_dive_why_3, "")
+
     def test_stoic_prompt_no_repeat_is_per_user(self):
         # Seed data (0002_seed_prompts) may have pre-loaded other active prompts;
         # isolate this test to exactly the two prompts it cares about.

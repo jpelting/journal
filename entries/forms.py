@@ -180,6 +180,11 @@ class MomentCheckInForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 4, "placeholder": "What are you feeling, and why?"}),
         required=False,
     )
+    deep_dive_why_1 = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), required=False)
+    deep_dive_why_2 = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), required=False)
+    deep_dive_why_3 = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), required=False)
+    deep_dive_why_4 = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), required=False)
+    deep_dive_why_5 = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), required=False)
 
 
 class AccessRequestForm(UserCreationForm):

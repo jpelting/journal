@@ -323,6 +323,18 @@ class Profile(models.Model):
     )
     last_evening_affirmation_sent_date = models.DateField(null=True, blank=True)
 
+    checkin_reminder_enabled = models.BooleanField(
+        default=False, help_text="Master opt-in for a daily push reminder to check in."
+    )
+    checkin_reminder_morning_enabled = models.BooleanField(default=False)
+    checkin_reminder_morning_time = models.TimeField(default=time(9, 0))
+    checkin_reminder_evening_enabled = models.BooleanField(default=False)
+    checkin_reminder_evening_time = models.TimeField(default=time(20, 0))
+    last_morning_checkin_reminder_sent_date = models.DateField(
+        null=True, blank=True, help_text="Dedupes push sends within the same day across cron ticks."
+    )
+    last_evening_checkin_reminder_sent_date = models.DateField(null=True, blank=True)
+
     def __str__(self):
         return self.name
 

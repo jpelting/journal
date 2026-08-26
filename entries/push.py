@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.utils import timezone
 from pywebpush import WebPushException, webpush
 
-from .models import MotivationalQuote, Profile, SelfAffirmation
+from .models import Entry, MotivationalQuote, Profile, SelfAffirmation
 from .weather import weather_location_for_user
 
 logger = logging.getLogger(__name__)
@@ -84,17 +84,46 @@ def _send_due_slot(profile, subscriptions, now_local, today_local, *, enabled, s
     return True
 
 
+def _send_due_checkin_reminder_slot(profile, subscriptions, now_local, today_local, *, enabled, send_time, last_sent_field, score_fields, url):
+    """Sends one push nudging the user to do one morning-or-evening check-in, once its
+    reminder time has passed, unless that slot's scores are already filled in for today.
+
+    Deliberately does *not* set last_sent_field when skipped because the check-in is
+    already done - only when a push actually goes out - so an early completion (before
+    reminder time) permanently silences that slot's reminder for the day, while a
+    not-yet-done user keeps getting evaluated tick to tick until the single push fires.
+    """
+    if not enabled:
+        return False
+    last_sent_date = getattr(profile, last_sent_field)
+    if not _slot_due(now_local, send_time, last_sent_date, today_local):
+        return False
+
+    entry = Entry.objects.filter(user=profile.user, date=today_local).first()
+    if entry and any(getattr(entry, field) is not None for field in score_fields):
+        return False
+
+    for subscription in subscriptions:
+        send_to_subscription(subscription, "Check-in reminder", "Don't forget to check in today.", url=url)
+    setattr(profile, last_sent_field, today_local)
+    profile.save(update_fields=[last_sent_field])
+    return True
+
+
 def send_due_notifications():
-    """Send any morning/evening quote or affirmation pushes due right now, for every opted-in user.
+    """Send any morning/evening quote/affirmation pushes, or check-in reminder push, due right
+    now, for every opted-in user.
 
     Called on a short interval (see the send_due_quote_notifications management command and
     the /internal/send-due-quote-notifications/ view it backs) since this app has no in-process
     scheduler - the Fly machine auto-stops when idle. Dedupes via last_<slot>_{quote,affirmation}_sent_date
-    so repeated ticks within the same day don't double-fire.
+    / last_checkin_reminder_sent_date so repeated ticks within the same day don't double-fire.
     """
     sent = 0
     profiles = (
-        Profile.objects.filter(Q(quotes_enabled=True) | Q(affirmations_enabled=True))
+        Profile.objects.filter(
+            Q(quotes_enabled=True) | Q(affirmations_enabled=True) | Q(checkin_reminder_enabled=True)
+        )
         .exclude(user__push_subscriptions__isnull=True)
         .distinct()
     )
@@ -136,6 +165,29 @@ def send_due_notifications():
                     get_content=lambda d, s: SelfAffirmation.for_date(d, slot=s),
                     format_body=lambda affirmation: affirmation.text,
                     url=f"/notify/affirmation/?slot={slot}",
+                ):
+                    sent += 1
+
+        if profile.checkin_reminder_enabled:
+            for enabled, send_time, last_sent_field, score_fields, url in (
+                (
+                    profile.checkin_reminder_morning_enabled,
+                    profile.checkin_reminder_morning_time,
+                    "last_morning_checkin_reminder_sent_date",
+                    ("morning_mental_score", "morning_physical_score", "morning_emotional_score", "morning_spiritual_score"),
+                    "/checkin/morning/",
+                ),
+                (
+                    profile.checkin_reminder_evening_enabled,
+                    profile.checkin_reminder_evening_time,
+                    "last_evening_checkin_reminder_sent_date",
+                    ("evening_mental_score", "evening_physical_score", "evening_emotional_score", "evening_spiritual_score"),
+                    "/checkin/evening/",
+                ),
+            ):
+                if _send_due_checkin_reminder_slot(
+                    profile, subscriptions, now_local, today_local,
+                    enabled=enabled, send_time=send_time, last_sent_field=last_sent_field, score_fields=score_fields, url=url,
                 ):
                     sent += 1
 

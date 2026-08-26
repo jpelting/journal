@@ -399,12 +399,19 @@ class NotificationSettingsForm(forms.ModelForm):
             "affirmation_morning_time",
             "affirmation_evening_enabled",
             "affirmation_evening_time",
+            "checkin_reminder_enabled",
+            "checkin_reminder_morning_enabled",
+            "checkin_reminder_morning_time",
+            "checkin_reminder_evening_enabled",
+            "checkin_reminder_evening_time",
         )
         widgets = {
             "quote_morning_time": forms.TimeInput(attrs={"type": "time"}),
             "quote_evening_time": forms.TimeInput(attrs={"type": "time"}),
             "affirmation_morning_time": forms.TimeInput(attrs={"type": "time"}),
             "affirmation_evening_time": forms.TimeInput(attrs={"type": "time"}),
+            "checkin_reminder_morning_time": forms.TimeInput(attrs={"type": "time"}),
+            "checkin_reminder_evening_time": forms.TimeInput(attrs={"type": "time"}),
         }
 
 

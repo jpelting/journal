@@ -107,6 +107,31 @@
         </section>
 
         <section class="part">
+            <h2>Check-in Reminder</h2>
+            <label>
+                {{ notification_form.checkin_reminder_enabled }}
+                Remind me to check in
+            </label>
+            <p class="helptext">On mobile, install this site to your phone's home screen below to get these as push notifications. Each reminder is skipped for the day once you've already filled in that check-in.</p>
+
+            <div id="checkin-reminder-schedule-rows">
+                <label>
+                    {{ notification_form.checkin_reminder_morning_enabled }}
+                    Morning
+                </label>
+                {{ notification_form.checkin_reminder_morning_time }}
+                {{ notification_form.checkin_reminder_morning_time.errors }}
+
+                <label>
+                    {{ notification_form.checkin_reminder_evening_enabled }}
+                    Evening
+                </label>
+                {{ notification_form.checkin_reminder_evening_time }}
+                {{ notification_form.checkin_reminder_evening_time.errors }}
+            </div>
+        </section>
+
+        <section class="part">
             <h2>Push notifications on this device</h2>
             <p class="helptext">To get your quotes and affirmations as phone notifications: add this site to your home screen (your browser's "Add to Home Screen" / "Install app" option), open it from there, then tap below.</p>
             <p class="form-actions">
@@ -171,6 +196,17 @@
                 scheduleRows.style.display = affirmationsEnabled.checked ? 'block' : 'none';
             }
             affirmationsEnabled.addEventListener('change', syncScheduleVisibility);
+            syncScheduleVisibility();
+        })();
+
+        (function () {
+            var checkinReminderEnabled = document.getElementById('{{ notification_form.checkin_reminder_enabled.id_for_label }}');
+            var scheduleRows = document.getElementById('checkin-reminder-schedule-rows');
+
+            function syncScheduleVisibility() {
+                scheduleRows.style.display = checkinReminderEnabled.checked ? 'block' : 'none';
+            }
+            checkinReminderEnabled.addEventListener('change', syncScheduleVisibility);
             syncScheduleVisibility();
         })();
 

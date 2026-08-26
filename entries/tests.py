@@ -307,6 +307,79 @@ class PushNotificationTests(TestCase):
         self.assertEqual(sent, 2)
         self.assertEqual(mock_send.call_count, 2)
 
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_sends_morning_checkin_reminder_when_not_yet_checked_in(self, mock_location, mock_send):
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        self.profile.quotes_enabled = False
+        self.profile.checkin_reminder_enabled = True
+        self.profile.checkin_reminder_morning_enabled = True
+        self.profile.checkin_reminder_morning_time = time(9, 0)
+        self.profile.save()
+
+        with patch("django.utils.timezone.now", return_value=self._fake_now(9, 2)):
+            sent = send_due_notifications()
+        self.assertEqual(sent, 1)
+        mock_send.assert_called_once_with(
+            self.subscription, "Check-in reminder", "Don't forget to check in today.", url="/checkin/morning/"
+        )
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.last_morning_checkin_reminder_sent_date, date(2030, 1, 1))
+
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_skips_morning_checkin_reminder_if_already_checked_in(self, mock_location, mock_send):
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        self.profile.quotes_enabled = False
+        self.profile.checkin_reminder_enabled = True
+        self.profile.checkin_reminder_morning_enabled = True
+        self.profile.checkin_reminder_morning_time = time(9, 0)
+        self.profile.save()
+        Entry.objects.create(user=self.user, date=date(2030, 1, 1), morning_mental_score=7)
+
+        with patch("django.utils.timezone.now", return_value=self._fake_now(9, 2)):
+            sent = send_due_notifications()
+        self.assertEqual(sent, 0)
+        mock_send.assert_not_called()
+        self.profile.refresh_from_db()
+        self.assertIsNone(self.profile.last_morning_checkin_reminder_sent_date)
+
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_evening_checkin_reminder_independent_of_morning(self, mock_location, mock_send):
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        self.profile.quotes_enabled = False
+        self.profile.checkin_reminder_enabled = True
+        self.profile.checkin_reminder_evening_enabled = True
+        self.profile.checkin_reminder_evening_time = time(20, 0)
+        self.profile.save()
+        Entry.objects.create(user=self.user, date=date(2030, 1, 1), morning_mental_score=7)
+
+        with patch("django.utils.timezone.now", return_value=self._fake_now(20, 2)):
+            sent = send_due_notifications()
+        self.assertEqual(sent, 1)
+        mock_send.assert_called_once_with(
+            self.subscription, "Check-in reminder", "Don't forget to check in today.", url="/checkin/evening/"
+        )
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.last_evening_checkin_reminder_sent_date, date(2030, 1, 1))
+
+    @patch("entries.push.send_to_subscription")
+    @patch("entries.push.weather_location_for_user")
+    def test_checkin_reminder_still_fires_next_day_after_a_send(self, mock_location, mock_send):
+        mock_location.return_value = (0, 0, "Nowhere", "UTC")
+        self.profile.quotes_enabled = False
+        self.profile.checkin_reminder_enabled = True
+        self.profile.checkin_reminder_morning_enabled = True
+        self.profile.checkin_reminder_morning_time = time(9, 0)
+        self.profile.last_morning_checkin_reminder_sent_date = date(2029, 12, 31)
+        self.profile.save()
+
+        with patch("django.utils.timezone.now", return_value=self._fake_now(9, 2)):
+            sent = send_due_notifications()
+        self.assertEqual(sent, 1)
+        mock_send.assert_called_once()
+
     def test_push_subscribe_requires_login(self):
         response = self.client.post(
             reverse("entries:push-subscribe"),

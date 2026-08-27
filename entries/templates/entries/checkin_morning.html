@@ -68,7 +68,7 @@
                 <p class="helptext">No practice found for this week.</p>
             {% endif %}
 
-            <h3>The Dichotomy of Control</h3>
+            <h3>What's In My Control</h3>
             <label for="{{ form.morning_anxious_about.id_for_label }}">What am I anxious about today?</label>
             {{ form.morning_anxious_about }}
             {{ form.morning_anxious_about.errors }}
@@ -77,13 +77,13 @@
             {{ form.morning_within_control }}
             {{ form.morning_within_control.errors }}
 
-            <h3>The Reserve Clause</h3>
+            <h3>Held Loosely</h3>
             <p class="helptext">
                 List your biggest event today. Append &ldquo;Fate permitting&rdquo; to it, and mentally accept that plans may change.
                 E.g. &ldquo;I will deliver the project presentation today&mdash;if nothing happens to prevent me.&rdquo;
             </p>
-            {{ form.morning_reserve_clause }}
-            {{ form.morning_reserve_clause.errors }}
+            {{ form.morning_todays_commitment }}
+            {{ form.morning_todays_commitment.errors }}
         </section>
 
         <button class="btn" type="submit">Etch Morning Check-in</button>

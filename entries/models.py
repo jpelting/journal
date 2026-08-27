@@ -94,7 +94,7 @@ class StoicPractice(models.Model):
     week_number = models.PositiveSmallIntegerField(
         unique=True, validators=[MinValueValidator(1), MaxValueValidator(52)]
     )
-    part = models.CharField(max_length=100, blank=True, help_text="e.g. 'The Discipline of Desire'.")
+    part = models.CharField(max_length=100, blank=True, help_text="e.g. 'Desire'.")
     title = models.CharField(max_length=200)
     description = models.TextField()
 
@@ -177,12 +177,12 @@ class Entry(models.Model):
     evening_spiritual_score = models.PositiveSmallIntegerField(validators=SCORE_VALIDATORS, null=True, blank=True)
     one_percent_goal_achieved = models.BooleanField(default=False)
 
-    # Part 1b: Stoic daily reflection (morning prep / evening review), per the
-    # "Daily Stoic Journal" template — distinct from the Part 2 guided journal below.
-    # The week's practice itself isn't stored per-entry; see the stoic_practice property.
+    # Part 1b: Stoic daily reflection (morning prep / evening review) - distinct from
+    # the Part 2 guided journal below. The week's practice itself isn't stored
+    # per-entry; see the stoic_practice property.
     morning_anxious_about = EncryptedTextField(blank=True, help_text="What am I anxious about today?")
     morning_within_control = EncryptedTextField(blank=True, help_text="What part of this is 100% in my control?")
-    morning_reserve_clause = EncryptedTextField(
+    morning_todays_commitment = EncryptedTextField(
         blank=True, help_text="Today's biggest event, held with “Fate permitting.”"
     )
 
@@ -193,7 +193,7 @@ class Entry(models.Model):
     evening_could_improve = EncryptedTextField(
         blank=True, help_text="If I could rewrite today, how would my ideal self respond to those exact situations?"
     )
-    evening_gratitude_audit = EncryptedTextField(
+    evening_gratitude = EncryptedTextField(
         blank=True, help_text="One thing I'd deeply miss if it were permanently taken away tomorrow."
     )
 

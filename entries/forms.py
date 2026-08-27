@@ -109,7 +109,7 @@ class MorningCheckInForm(ScopedEntrySaveMixin, ScoreSliderMinFixMixin, forms.Mod
             "one_percent_goal",
             "morning_anxious_about",
             "morning_within_control",
-            "morning_reserve_clause",
+            "morning_todays_commitment",
         ]
         widgets = {
             **SCORE_WIDGETS,
@@ -121,7 +121,7 @@ class MorningCheckInForm(ScopedEntrySaveMixin, ScoreSliderMinFixMixin, forms.Mod
             ),
             "morning_anxious_about": forms.Textarea(attrs={"rows": 2}),
             "morning_within_control": forms.Textarea(attrs={"rows": 2}),
-            "morning_reserve_clause": forms.Textarea(
+            "morning_todays_commitment": forms.Textarea(
                 attrs={"rows": 2, "placeholder": "e.g. I will deliver the project presentation today—if nothing happens to prevent me."}
             ),
         }
@@ -139,14 +139,14 @@ class EveningCheckInForm(ScopedEntrySaveMixin, ScoreSliderMinFixMixin, forms.Mod
             "evening_did_well",
             "evening_where_falter",
             "evening_could_improve",
-            "evening_gratitude_audit",
+            "evening_gratitude",
         ]
         widgets = {
             **SCORE_WIDGETS,
             "evening_did_well": forms.Textarea(attrs={"rows": 2}),
             "evening_where_falter": forms.Textarea(attrs={"rows": 2}),
             "evening_could_improve": forms.Textarea(attrs={"rows": 2}),
-            "evening_gratitude_audit": forms.Textarea(attrs={"rows": 2}),
+            "evening_gratitude": forms.Textarea(attrs={"rows": 2}),
         }
 
 

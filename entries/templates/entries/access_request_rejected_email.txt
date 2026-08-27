@@ -1,4 +1,11 @@
-{% autoescape off %}Your request to join The Wax Tablet was not approved.
+{% autoescape off %}Hi {{ first_name }},
 
-If you think this is a mistake, reply to this email.
+Thanks so much for wanting to join The Wax Tablet — we're glad you're interested.
+
+After reviewing your request, we're not able to approve it at this time. We know that's not the news you were hoping for.
+
+If you think this was a mistake, just reply to this email and we'll take another look.
+
+Take care,
+The Wax Tablet
 {% endautoescape %}

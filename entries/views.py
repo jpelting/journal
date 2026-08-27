@@ -151,7 +151,7 @@ def access_request_reject_view(request, token):
         access_request.decided_at = timezone.now()
         access_request.save()
 
-        context = {"access_request": access_request}
+        context = {"access_request": access_request, "first_name": access_request.name.split(" ")[0]}
         subject = render_to_string("entries/access_request_rejected_subject.txt", context).strip()
         body = render_to_string("entries/access_request_rejected_email.txt", context)
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [access_request.email])

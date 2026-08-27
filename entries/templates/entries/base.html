@@ -664,9 +664,28 @@
     <script>
         document.querySelectorAll('input.slider').forEach(function (slider) {
             var output = document.querySelector('output[for="' + slider.id + '"]');
-            if (!output) return;
-            slider.addEventListener('input', function () {
-                output.textContent = slider.value;
+            if (output) {
+                slider.addEventListener('input', function () {
+                    output.textContent = slider.value;
+                });
+            }
+            // Browsers change a range input's value on mouse wheel/trackpad scroll when
+            // the cursor is hovering over it, which silently cranks these full-width
+            // sliders to their max as the page scrolls past them - scroll the page
+            // instead of the slider.
+            slider.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                window.scrollBy(0, e.deltaY);
+            }, { passive: false });
+            // Home/End/PageUp/PageDown jump a focused range input straight to its
+            // min/max (a browser accessibility default) - on this 1-10 scale that's a
+            // silent, disproportionate change from a keystroke someone reflexively hits
+            // out of habit (e.g. End, expecting text-field "jump to end" behavior) while
+            // tabbing through the form. Arrow keys still work for fine adjustment.
+            slider.addEventListener('keydown', function (e) {
+                if (['Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
+                    e.preventDefault();
+                }
             });
         });
     </script>

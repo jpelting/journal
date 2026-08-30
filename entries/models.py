@@ -533,6 +533,10 @@ class FeatureUsageEvent(models.Model):
         ("account", "Account"),
         ("feedback", "Feedback"),
         ("survey", "Survey"),
+        ("community", "Community"),
+        ("prayer_request", "Prayer Request"),
+        ("quote", "Motivational Quote"),
+        ("affirmation", "Self-Affirmation"),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="feature_usage_events")

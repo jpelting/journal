@@ -18,6 +18,11 @@ FEATURE_BY_VIEW_NAME = {
     "entries:account": "account",
     "entries:feedback": "feedback",
     "entries:survey": "survey",
+    "entries:community-list": "community",
+    "entries:community-detail": "community",
+    "entries:notify-prayer-request": "prayer_request",
+    "entries:notify-quote": "quote",
+    "entries:notify-affirmation": "affirmation",
 }
 
 JOURNAL_TYPE_FEATURES = {

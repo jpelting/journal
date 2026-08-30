@@ -65,6 +65,7 @@ from .models import (
     SurveyResponse,
 )
 from .prayer import purge_expired_prayer_requests, send_due_prayer_digests, send_immediate_prayer_notification
+from .reengagement import send_due_reengagement_emails
 from .weather import (
     get_current_weather,
     get_tomorrow_forecast,
@@ -244,12 +245,12 @@ def push_test_view(request):
 @login_not_required
 @require_POST
 def send_due_notifications_view(request):
-    """Cron target: POST /internal/send-due-quote-notifications/, hit every few minutes by
-    the GitHub Actions workflow (see .github/workflows/send-quote-notifications.yml) since
-    this app has no in-process scheduler and the Fly machine auto-stops when idle. Not a
-    Django-session endpoint - authenticated by a shared secret instead. Also drives the
-    community prayer-request digest send and purge on the same tick (see entries/prayer.py) -
-    piggybacking here avoids a second every-5-minutes cron workflow/secret."""
+    """Cron target: POST /internal/send-due-quote-notifications/, hit every minute or so by
+    an external cron-job.org job since this app has no in-process scheduler and the Fly
+    machine auto-stops when idle. Not a Django-session endpoint - authenticated by a shared
+    secret instead. Also drives the community prayer-request digest send/purge (see
+    entries/prayer.py) and the inactivity re-engagement email (see entries/reengagement.py)
+    on the same tick - piggybacking here avoids extra cron jobs/secrets."""
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
     if not token or not hmac.compare_digest(token, settings.CRON_SECRET):
@@ -257,8 +258,14 @@ def send_due_notifications_view(request):
     sent = send_due_notifications()
     prayer_digests_sent = send_due_prayer_digests()
     prayer_requests_purged = purge_expired_prayer_requests()
+    reengagement_emails_sent = send_due_reengagement_emails(request.build_absolute_uri(reverse("login")))
     return JsonResponse(
-        {"sent": sent, "prayer_digests_sent": prayer_digests_sent, "prayer_requests_purged": prayer_requests_purged}
+        {
+            "sent": sent,
+            "prayer_digests_sent": prayer_digests_sent,
+            "prayer_requests_purged": prayer_requests_purged,
+            "reengagement_emails_sent": reengagement_emails_sent,
+        }
     )
 
 

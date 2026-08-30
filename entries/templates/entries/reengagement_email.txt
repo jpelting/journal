@@ -1,0 +1,17 @@
+{% autoescape off %}Hi {{ first_name }},
+
+It's been a few days since you last opened The Wax Tablet, and we wanted to
+check in. No pressure at all — life gets full, and that's exactly what these
+pages are for when you're ready to come back to them.
+
+Even a single line about how today went counts. A mood check-in, a quiet
+minute with the daily prayer, or just marking whether you moved a little
+closer to who you want to be — that's the whole practice.
+
+Whenever you're ready, we'll be here:
+
+{{ login_url }}
+
+Take care,
+The Wax Tablet
+{% endautoescape %}

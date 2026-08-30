@@ -335,6 +335,16 @@ class Profile(models.Model):
     )
     last_evening_checkin_reminder_sent_date = models.DateField(null=True, blank=True)
 
+    reengagement_emails_enabled = models.BooleanField(
+        default=True,
+        help_text="Send a 'come back' email after a stretch of inactivity. On by default; opt out below.",
+    )
+    last_reengagement_email_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Dedupes across cron ticks - only sent again after activity resumes and inactivity recurs.",
+    )
+
     def __str__(self):
         return self.name
 

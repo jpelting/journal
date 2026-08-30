@@ -409,6 +409,7 @@ class NotificationSettingsForm(forms.ModelForm):
             "checkin_reminder_morning_time",
             "checkin_reminder_evening_enabled",
             "checkin_reminder_evening_time",
+            "reengagement_emails_enabled",
         )
         widgets = {
             "quote_morning_time": forms.TimeInput(attrs={"type": "time"}),

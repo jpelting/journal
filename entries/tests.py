@@ -1,18 +1,29 @@
 import json
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core import mail
 from django.db import IntegrityError, connection, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Entry, MomentCheckIn, MotivationalQuote, Profile, PushSubscription, SelfAffirmation, StoicPrompt
+from .models import (
+    Entry,
+    LoginCount,
+    MomentCheckIn,
+    MotivationalQuote,
+    Profile,
+    PushSubscription,
+    SelfAffirmation,
+    StoicPrompt,
+)
 from .push import send_due_notifications
+from .reengagement import send_due_reengagement_emails
 from .views import _next_stoic_prompt, _today_entry
 
 
@@ -447,3 +458,70 @@ class PushNotificationTests(TestCase):
             )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["sent"], 1)
+
+
+class ReengagementEmailTests(TestCase):
+    FIXED_NOW = datetime(2030, 1, 10, 12, 0, tzinfo=ZoneInfo("UTC"))
+    LOGIN_URL = "https://example.com/login/"
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="quiet-user", email="quiet@example.com", password="pw12345")
+        self.profile = Profile.objects.create(
+            user=self.user,
+            name="Quiet User",
+            date_of_birth=date(1990, 1, 1),
+            gender="prefer_not_to_say",
+            zipcode="28115",
+        )
+        self.login_count = LoginCount.objects.create(
+            user=self.user, last_activity_at=self.FIXED_NOW - timedelta(days=6)
+        )
+
+    def test_sends_after_threshold_and_not_again_until_active_since(self):
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Quiet", mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].alternatives[0][1], "text/html")
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.last_reengagement_email_sent_at, self.FIXED_NOW)
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(minutes=2)):
+            sent_again = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent_again, 0)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_does_not_send_before_threshold(self):
+        self.login_count.last_activity_at = self.FIXED_NOW - timedelta(days=2)
+        self.login_count.save()
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_respects_opt_out(self):
+        self.profile.reengagement_emails_enabled = False
+        self.profile.save()
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 0)
+
+    def test_skips_users_without_a_profile(self):
+        self.profile.delete()
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 0)
+
+    def test_resends_after_activity_resumes_and_goes_quiet_again(self):
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            send_due_reengagement_emails(self.LOGIN_URL)
+
+        # User comes back the next day, then goes quiet again.
+        self.login_count.last_activity_at = self.FIXED_NOW + timedelta(days=1)
+        self.login_count.save()
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=7)):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 1)
+        self.assertEqual(len(mail.outbox), 2)

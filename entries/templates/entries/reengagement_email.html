@@ -1,0 +1,47 @@
+{% autoescape on %}<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wax Tablet</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f1ea; font-family:Georgia,'Times New Roman',serif; color:#2b2620;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea; padding:24px 12px;">
+<tr>
+<td align="center">
+<table role="presentation" width="100%" style="max-width:560px; background-color:#ffffff; border:1px solid #e2dcc8; border-radius:8px;" cellpadding="0" cellspacing="0">
+<tr>
+<td style="background-color:#1a1a1a; padding:18px 28px; border-radius:8px 8px 0 0;">
+<span style="display:inline-block; width:26px; height:26px; line-height:26px; text-align:center; border-radius:50%; background-color:#c68b45; color:#1a1a1a; font-weight:bold; font-family:Georgia,serif; font-size:13px; vertical-align:middle;">WT</span>
+<span style="color:#eae5d9; font-size:17px; font-weight:bold; letter-spacing:0.04em; vertical-align:middle; padding-left:10px;">The Wax Tablet</span>
+</td>
+</tr>
+<tr>
+<td style="padding:32px 28px 8px;">
+<h1 style="margin:0 0 18px; font-size:21px; color:#2b2620;">Your tablet is waiting for you</h1>
+<p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#2b2620;">Hi {{ first_name }},</p>
+<p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#2b2620;">It's been a few days since you last opened The Wax Tablet, and we wanted to check in. No pressure at all — life gets full, and that's exactly what these pages are for when you're ready to come back to them.</p>
+<p style="margin:0 0 26px; font-size:15px; line-height:1.6; color:#2b2620;">Even a single line about how today went counts. A mood check-in, a quiet minute with the daily prayer, or just marking whether you moved a little closer to who you want to be — that's the whole practice.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 30px;">
+<tr>
+<td style="border-radius:6px; background-color:#c68b45;">
+<a href="{{ login_url }}" style="display:inline-block; padding:12px 26px; font-family:Georgia,'Times New Roman',serif; font-size:15px; font-weight:bold; color:#1a1a1a; text-decoration:none; border-radius:6px;">Open The Wax Tablet</a>
+</td>
+</tr>
+</table>
+<p style="margin:0 0 6px; font-size:15px; line-height:1.6; color:#2b2620;">Take care,</p>
+<p style="margin:0; font-size:15px; line-height:1.6; color:#2b2620;">The Wax Tablet</p>
+</td>
+</tr>
+<tr>
+<td style="padding:14px 28px; background-color:#f9f7f1; border-top:1px solid #e2dcc8; border-radius:0 0 8px 8px;">
+<p style="margin:0; font-size:12px; color:#8c8878;">You're getting this because it's been a few quiet days on your account. You can turn off these emails any time from your Account page.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
+{% endautoescape %}

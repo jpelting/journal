@@ -308,7 +308,9 @@ class PushNotificationTests(TestCase):
         with patch("django.utils.timezone.now", return_value=self._fake_now(7, 2)):
             sent = send_due_notifications()
         self.assertEqual(sent, 1)
-        mock_send.assert_called_once_with(self.subscription, "Your morning affirmation", "I am ready for today.")
+        mock_send.assert_called_once_with(
+            self.subscription, "Your morning affirmation", "I am ready for today.", url="/notify/affirmation/?slot=1"
+        )
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.last_morning_affirmation_sent_date, date(2030, 1, 1))
 

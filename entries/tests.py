@@ -24,6 +24,7 @@ from .models import (
 )
 from .push import send_due_notifications
 from .reengagement import send_due_reengagement_emails
+from .streaks import current_streak
 from .views import _next_stoic_prompt, _today_entry
 
 
@@ -525,3 +526,62 @@ class ReengagementEmailTests(TestCase):
             sent = send_due_reengagement_emails(self.LOGIN_URL)
         self.assertEqual(sent, 1)
         self.assertEqual(len(mail.outbox), 2)
+
+
+class StreakTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="streaker", password="pw12345")
+
+    def _mark_active(self, d):
+        Entry.objects.create(user=self.user, date=d, morning_mental_score=5)
+
+    def _mark_moment(self, d):
+        MomentCheckIn.objects.create(
+            user=self.user, created_at=datetime(d.year, d.month, d.day, 18, 0, tzinfo=ZoneInfo("UTC"))
+        )
+
+    def test_no_activity_is_zero(self):
+        self.assertEqual(current_streak(self.user, today=date(2030, 1, 10)), 0)
+
+    def test_consecutive_days_count_up(self):
+        for d in (date(2030, 1, 8), date(2030, 1, 9), date(2030, 1, 10)):
+            self._mark_active(d)
+        self.assertEqual(current_streak(self.user, today=date(2030, 1, 10)), 3)
+
+    def test_moment_checkin_alone_counts_as_an_active_day(self):
+        self._mark_moment(date(2030, 1, 10))
+        self.assertEqual(current_streak(self.user, today=date(2030, 1, 10)), 1)
+
+    def test_yesterday_active_keeps_streak_alive_before_today_is_over(self):
+        self._mark_active(date(2030, 1, 9))
+        self.assertEqual(current_streak(self.user, today=date(2030, 1, 10)), 1)
+
+    def test_neither_today_nor_yesterday_active_is_zero(self):
+        self._mark_active(date(2030, 1, 5))
+        self.assertEqual(current_streak(self.user, today=date(2030, 1, 10)), 0)
+
+    def test_single_gap_day_is_forgiven(self):
+        # Active Jan 7-8, gap Jan 9, active Jan 10 (today) - the gap shouldn't add to the
+        # count, but shouldn't break the chain either.
+        for d in (date(2030, 1, 7), date(2030, 1, 8), date(2030, 1, 10)):
+            self._mark_active(d)
+        self.assertEqual(current_streak(self.user, today=date(2030, 1, 10)), 3)
+
+    def test_two_consecutive_missed_days_break_the_streak(self):
+        self._mark_active(date(2030, 1, 5))
+        self._mark_active(date(2030, 1, 10))
+        # Jan 8 and Jan 9 are both missed - only the first is forgiven.
+        self.assertEqual(current_streak(self.user, today=date(2030, 1, 10)), 1)
+
+    def test_gaps_within_a_week_of_each_other_break_the_streak(self):
+        for d in (date(2030, 1, 10), date(2030, 1, 12), date(2030, 1, 13), date(2030, 1, 15)):
+            self._mark_active(d)
+        # Gaps on Jan 11 and Jan 14 are only 3 days apart - the second one isn't forgiven.
+        self.assertEqual(current_streak(self.user, today=date(2030, 1, 15)), 3)
+
+    def test_gaps_a_week_or_more_apart_are_both_forgiven(self):
+        active_days = [d for d in range(1, 16) if d not in (7, 14)]
+        for day in active_days:
+            self._mark_active(date(2030, 1, day))
+        # Gaps on Jan 7 and Jan 14 are exactly 7 days apart - both are forgiven.
+        self.assertEqual(current_streak(self.user, today=date(2030, 1, 15)), len(active_days))

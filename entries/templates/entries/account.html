@@ -5,6 +5,16 @@
         <h1>My Account</h1>
     </div>
 
+    <section class="part">
+        <h2>Your Streak</h2>
+        {% if current_streak %}
+            <p class="streak-badge">&#128293; {{ current_streak }}-day streak</p>
+            <p class="helptext">Counts any day you did a morning check-in, evening check-in, or Moment check-in. Miss a day and it's forgiven once a week &mdash; miss two within the same week and the streak resets.</p>
+        {% else %}
+            <p class="helptext">No active streak yet &mdash; do any check-in today to start one.</p>
+        {% endif %}
+    </section>
+
     <form method="post" novalidate>
         {% csrf_token %}
         <input type="hidden" name="form" value="account">

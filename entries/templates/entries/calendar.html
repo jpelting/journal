@@ -4,6 +4,7 @@
 {% block content %}
     <div class="checkin-header">
         <h1>{{ month_name }} {{ year }}</h1>
+        {% if current_streak %}<p class="streak-badge">&#128293; {{ current_streak }}-day streak</p>{% endif %}
     </div>
     <p class="form-actions">
         <button type="button" class="btn" id="calendar-legend-btn">Calendar Legend</button>

@@ -93,6 +93,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'entries.context_processors.announcements',
                 'entries.context_processors.survey_prompt',
+                'entries.context_processors.streak',
             ],
         },
     },

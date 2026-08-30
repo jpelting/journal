@@ -40,6 +40,14 @@
         }
         nav a { text-decoration: none; font-weight: bold; }
         nav .nav-user { margin-left: auto; color: var(--text-muted); font-weight: normal; }
+        .streak-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        .checkin-header .streak-badge { justify-content: center; margin: 0.25rem 0 0; font-size: 0.95rem; }
         nav .logout-form button {
             background: none;
             border: none;
@@ -561,6 +569,7 @@
         <a href="{% url 'entries:community-list' %}">Community</a>
         <a href="{% url 'entries:feedback' %}">Feedback</a>
         {% if user.is_superuser %}<a href="/admin/">Admin</a>{% endif %}
+        {% if current_streak %}<span class="streak-badge" title="Current streak">&#128293; {{ current_streak }}</span>{% endif %}
         <a href="{% url 'entries:account' %}" class="nav-user">{{ user.username }}</a>
         <form action="{% url 'logout' %}" method="post" class="logout-form">
             {% csrf_token %}

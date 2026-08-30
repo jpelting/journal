@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from .models import SURVEY_DECLINE_COOLDOWN_DAYS, SURVEY_ELIGIBLE_ACCOUNT_AGE_DAYS, Announcement
+from .streaks import current_streak
 
 SESSION_KEY = "last_seen_announcement_at"
 
@@ -59,3 +60,11 @@ def survey_prompt(request):
                 return {}
 
     return {"show_survey_prompt": True}
+
+
+def streak(request):
+    """The signed-in user's current check-in streak, for the nav badge (and reused by
+    the calendar/account pages, which don't need to compute it themselves)."""
+    if not request.user.is_authenticated:
+        return {}
+    return {"current_streak": current_streak(request.user)}

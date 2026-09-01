@@ -2,12 +2,19 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.db.models import F, Q
 from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .models import LoginCount
 
 INACTIVITY_THRESHOLD_DAYS = 5
+
+# Caps how many candidates one cron tick evaluates - same rationale as
+# entries.push.MAX_PROFILES_PER_TICK: bounds one request's latency regardless of how many users
+# are inactive at once, with anything left over naturally retried next tick since an episode's
+# dedup isn't consumed until the email actually sends.
+MAX_REENGAGEMENT_PER_TICK = 200
 
 
 def send_due_reengagement_emails(login_url):
@@ -25,17 +32,23 @@ def send_due_reengagement_emails(login_url):
     """
     cutoff = timezone.now() - timedelta(days=INACTIVITY_THRESHOLD_DAYS)
     sent = 0
-    login_counts = LoginCount.objects.filter(last_activity_at__lt=cutoff).select_related("user__profile")
+    # Pushed into the query rather than filtered in Python per row: the profile__ join
+    # requiring reengagement_emails_enabled=True already excludes Profile-less accounts
+    # (e.g. createsuperuser) since that's an inner join, same effect as the old
+    # `profile is None` check.
+    login_counts = (
+        LoginCount.objects.filter(last_activity_at__lt=cutoff, user__profile__reengagement_emails_enabled=True)
+        .exclude(user__email="")
+        .filter(
+            Q(user__profile__last_reengagement_email_sent_at__isnull=True)
+            | Q(user__profile__last_reengagement_email_sent_at__lte=F("last_activity_at"))
+        )
+        .select_related("user__profile")
+        .order_by("?")[:MAX_REENGAGEMENT_PER_TICK]
+    )
     for login_count in login_counts:
         user = login_count.user
-        profile = getattr(user, "profile", None)
-        if profile is None or not profile.reengagement_emails_enabled or not user.email:
-            continue
-        if (
-            profile.last_reengagement_email_sent_at
-            and profile.last_reengagement_email_sent_at > login_count.last_activity_at
-        ):
-            continue
+        profile = user.profile
 
         context = {"first_name": profile.name.split(" ")[0], "login_url": login_url}
         subject = render_to_string("entries/reengagement_subject.txt", context).strip()

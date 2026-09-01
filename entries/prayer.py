@@ -6,10 +6,16 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from .models import Community, PrayerRequest
+from .models import Community, PrayerRequest, PushSubscription
 from .push import _slot_due, send_to_subscription
 
 PURGE_DELAY_MINUTES = 30
+
+# Caps how many communities one cron tick evaluates for a digest send - same rationale as
+# entries.push.MAX_PROFILES_PER_TICK: bounds one request's latency regardless of total
+# community count, with anything left over naturally retried next tick since a community's
+# due-ness isn't consumed until its digest actually sends.
+MAX_COMMUNITIES_PER_TICK = 200
 
 
 def _active_member_users(community):
@@ -32,9 +38,9 @@ def _send_email(users, subject_template, text_template, context):
 
 
 def _send_push_to_members(users, title, body, url="/"):
-    for user in users:
-        for subscription in user.push_subscriptions.all():
-            send_to_subscription(subscription, title, body, url=url)
+    subscriptions = PushSubscription.objects.filter(user_id__in=[user.pk for user in users])
+    for subscription in subscriptions:
+        send_to_subscription(subscription, title, body, url=url)
 
 
 def send_immediate_prayer_notification(prayer_request):
@@ -67,7 +73,7 @@ def send_due_prayer_digests():
     now_local = timezone.now().astimezone(tz)
     today_local = now_local.date()
 
-    for community in Community.objects.all():
+    for community in Community.objects.order_by("?")[:MAX_COMMUNITIES_PER_TICK]:
         if not _slot_due(now_local, community.prayer_digest_time, community.last_prayer_digest_sent_date, today_local):
             continue
 

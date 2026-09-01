@@ -513,7 +513,10 @@ class LoginCount(models.Model):
     count = models.PositiveIntegerField(default=0)
     last_login_at = models.DateTimeField(null=True, blank=True)
     last_activity_at = models.DateTimeField(
-        null=True, blank=True, help_text="Last authenticated request seen from this user, updated on any page view (not just sign-in). Powers the admin 'active now' view."
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Last authenticated request seen from this user, updated on any page view (not just sign-in). Powers the admin 'active now' view.",
     )
 
     def __str__(self):
@@ -693,6 +696,10 @@ class CommunityMembership(models.Model):
     class Meta:
         unique_together = ("community", "user")
         ordering = ["joined_at"]
+        indexes = [
+            models.Index(fields=["community", "status"]),
+            models.Index(fields=["user", "status"]),
+        ]
 
     def __str__(self):
         return f"{self.user} in {self.community} ({self.status})"

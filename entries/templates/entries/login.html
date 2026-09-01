@@ -87,6 +87,16 @@
     </style>
 </head>
 <body>
+    <script>
+        // iOS resumes a suspended home-screen-icon (standalone PWA) instance without a real
+        // network reload, so a resumed page can carry a stale CSRF token indefinitely. Force
+        // a real reload whenever the browser restores a page from bfcache/suspension.
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                location.reload();
+            }
+        });
+    </script>
     <div class="login-card">
         <h1>The Wax Tablet</h1>
         <p class="subtitle">Leave your mark for today</p>

@@ -173,6 +173,13 @@ if not DEBUG:
         origin for origin in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin
     ]
 
+# Ties the CSRF secret to the server-side session instead of a second, independent cookie —
+# fixes mobile-only "CSRF token from POST incorrect" login failures (confirmed via production
+# logs 2026-08-31/09-01, hit multiple users) where some mobile browser behavior (background
+# tab refresh, PWA relaunch, bfcache restore) resets the standalone csrftoken cookie out from
+# under an already-rendered login page while the session cookie itself stays stable.
+CSRF_USE_SESSIONS = True
+
 
 # Django's default logging config only sends WARNING+ output to console when DEBUG=True, so
 # without this, security warnings (e.g. CSRF-rejection reasons) vanish silently in production

@@ -64,6 +64,7 @@ from .models import (
     StoicPrompt,
     SurveyResponse,
 )
+from .maintenance import clean_up_expired_sessions_if_due
 from .prayer import purge_expired_prayer_requests, send_due_prayer_digests, send_immediate_prayer_notification
 from .reengagement import send_due_reengagement_emails
 from .weather import (
@@ -259,12 +260,14 @@ def send_due_notifications_view(request):
     prayer_digests_sent = send_due_prayer_digests()
     prayer_requests_purged = purge_expired_prayer_requests()
     reengagement_emails_sent = send_due_reengagement_emails(request.build_absolute_uri(reverse("login")))
+    session_cleanup_ran = clean_up_expired_sessions_if_due()
     return JsonResponse(
         {
             "sent": sent,
             "prayer_digests_sent": prayer_digests_sent,
             "prayer_requests_purged": prayer_requests_purged,
             "reengagement_emails_sent": reengagement_emails_sent,
+            "session_cleanup_ran": session_cleanup_ran,
         }
     )
 

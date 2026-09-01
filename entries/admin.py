@@ -20,6 +20,7 @@ from .models import (
     AnnouncementGenState,
     Community,
     CommunityMembership,
+    CronMaintenanceState,
     DevotionalPrompt,
     Entry,
     FeatureUsageEvent,
@@ -347,6 +348,14 @@ class AnnouncementAdmin(admin.ModelAdmin):
 class AnnouncementGenStateAdmin(admin.ModelAdmin):
     list_display = ["last_sha", "updated_at"]
     readonly_fields = ["updated_at"]
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(CronMaintenanceState)
+class CronMaintenanceStateAdmin(admin.ModelAdmin):
+    list_display = ["last_session_cleanup_date"]
 
     def has_add_permission(self, request):
         return False

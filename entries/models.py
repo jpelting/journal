@@ -502,6 +502,21 @@ class AnnouncementGenState(models.Model):
         return f"Announcement generation state (last_sha={self.last_sha[:8] or 'none'})"
 
 
+class CronMaintenanceState(models.Model):
+    """Singleton row (same pattern as AnnouncementGenState above) tracking dedup dates for
+    once-a-day maintenance jobs piggybacked onto the once-a-minute notification cron tick
+    (see entries.views.send_due_notifications_view) rather than a dedicated cron job. There's
+    no natural per-user/per-community model to hang a global job's dedup date on, unlike the
+    other daily jobs in this codebase (e.g. Community.last_prayer_digest_sent_date)."""
+
+    last_session_cleanup_date = models.DateField(
+        null=True, blank=True, help_text="Last time expired sessions were purged via `clearsessions`."
+    )
+
+    def __str__(self):
+        return f"Cron maintenance state (last_session_cleanup_date={self.last_session_cleanup_date or 'never'})"
+
+
 class LoginCount(models.Model):
     """Tracks how many times each user has signed in, shown as a column on the admin User list.
 

@@ -19,7 +19,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
 from xhtml2pdf import pisa
 
@@ -592,6 +592,45 @@ def community_reject_view(request, pk, membership_id):
     messages.info(request, f'Declined "{membership.user.username}"\'s request to join "{community.name}".')
     membership.delete()
     return redirect(community.get_absolute_url())
+
+
+SEARCH_RESULT_LIMIT = 20
+
+
+@require_GET
+def community_search_view(request):
+    """Live search for the "Join a Community" box - returns at most SEARCH_RESULT_LIMIT
+    communities the user isn't already in, matching the query by name. Backs a fetch()-driven
+    typeahead instead of shipping every community into the page (entries/community_list.html)."""
+    query = request.GET.get("q", "").strip()
+    if len(query) < 2:
+        return JsonResponse({"results": []})
+    communities = (
+        Community.objects.exclude(memberships__user=request.user)
+        .filter(name__icontains=query)
+        .order_by("name")
+        .values("id", "name")[:SEARCH_RESULT_LIMIT]
+    )
+    return JsonResponse({"results": list(communities)})
+
+
+@require_GET
+def community_search_users_view(request, pk):
+    """Live search backing the "Add a member directly" admin form - returns at most
+    SEARCH_RESULT_LIMIT matching usernames instead of shipping every registered user into the
+    page (entries/community_detail.html)."""
+    community = get_object_or_404(Community, pk=pk, created_by=request.user)
+    query = request.GET.get("q", "").strip()
+    if len(query) < 2:
+        return JsonResponse({"results": []})
+    usernames = (
+        get_user_model()
+        .objects.exclude(pk=request.user.pk)
+        .filter(username__icontains=query)
+        .order_by("username")
+        .values_list("username", flat=True)[:SEARCH_RESULT_LIMIT]
+    )
+    return JsonResponse({"results": list(usernames)})
 
 
 @require_POST

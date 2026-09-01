@@ -275,14 +275,20 @@ class JoinCommunityForm(forms.Form):
     email) once the admin approves the request; see EnterInviteCodeForm for the step
     that actually completes the join."""
 
-    community = forms.ModelChoiceField(queryset=Community.objects.none(), label="Community")
+    community = forms.ModelChoiceField(
+        queryset=Community.objects.none(), label="Community", widget=forms.HiddenInput()
+    )
     agree_to_user_terms = forms.BooleanField(
         required=True, label="I have read and agree to the Community User Agreement"
     )
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["community"].queryset = Community.objects.exclude(memberships__user=user).order_by("name")
+        # Not rendered as a <select> (see the HiddenInput widget above) - the live search box in
+        # community_list.html sets this field's value via JS. The queryset is still needed so
+        # validation can check the submitted id belongs to it (a single pk= lookup, not a full
+        # table scan) rather than to render every option up front.
+        self.fields["community"].queryset = Community.objects.exclude(memberships__user=user)
 
 
 class EnterInviteCodeForm(forms.Form):

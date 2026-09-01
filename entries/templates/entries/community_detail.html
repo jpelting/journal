@@ -121,7 +121,8 @@
                 {{ add_member_form.non_field_errors }}
 
                 <label for="{{ add_member_form.username.id_for_label }}">Username</label>
-                {{ add_member_form.username }}
+                <input type="text" name="username" id="{{ add_member_form.username.id_for_label }}" maxlength="150" list="addable-usernames" placeholder="Start typing a username&hellip;" autocomplete="off" required>
+                <datalist id="addable-usernames"></datalist>
                 {{ add_member_form.username.errors }}
 
                 <p class="form-actions"><button type="submit" class="btn">Add member</button></p>
@@ -247,6 +248,34 @@
     </script>
 
     {% if is_admin %}
+        <script>
+            (function () {
+                var usernameInput = document.getElementById("{{ add_member_form.username.id_for_label }}");
+                var usernameDatalist = document.getElementById("addable-usernames");
+                if (!usernameInput || !usernameDatalist) return;
+                var debounceTimer = null;
+                usernameInput.addEventListener("input", function () {
+                    var query = usernameInput.value.trim();
+                    clearTimeout(debounceTimer);
+                    if (query.length < 2) {
+                        usernameDatalist.innerHTML = "";
+                        return;
+                    }
+                    debounceTimer = setTimeout(function () {
+                        fetch("{% url 'entries:community-search-users' community.pk %}?q=" + encodeURIComponent(query))
+                            .then(function (response) { return response.json(); })
+                            .then(function (data) {
+                                usernameDatalist.innerHTML = "";
+                                data.results.forEach(function (username) {
+                                    var option = document.createElement("option");
+                                    option.value = username;
+                                    usernameDatalist.appendChild(option);
+                                });
+                            });
+                    }, 250);
+                });
+            })();
+        </script>
         <script>
             (function () {
                 var picker = document.getElementById("prayer-clock-picker");

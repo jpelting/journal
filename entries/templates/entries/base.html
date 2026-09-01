@@ -184,6 +184,12 @@
             text-decoration: underline;
             cursor: pointer;
         }
+        .search-results { list-style: none; margin: 0.4rem 0 0; padding: 0; border: 1px solid var(--border-subtle); border-radius: 4px; max-height: 12rem; overflow-y: auto; }
+        .search-results:empty { display: none; }
+        .search-results li { border-bottom: 1px solid var(--border-subtle); }
+        .search-results li:last-child { border-bottom: none; }
+        .search-results button { display: block; width: 100%; text-align: left; background: none; border: none; padding: 0.5rem 0.6rem; font: inherit; color: var(--text); cursor: pointer; }
+        .search-results button:hover, .search-results button:focus { background: var(--surface); }
         .prompt { font-style: italic; color: var(--accent); margin-top: 0.25rem; }
         .helptext { font-size: 0.85rem; color: var(--text-muted); }
         .invite-code { font-size: 1.4rem; letter-spacing: 0.2rem; background: var(--surface-alt, rgba(198, 139, 69, 0.12)); border: 1px solid var(--border-subtle); border-radius: 0.4rem; padding: 0.4rem 0.8rem; display: inline-block; }

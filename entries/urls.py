@@ -26,7 +26,9 @@ urlpatterns = [
     path("community/create/", views.community_create_view, name="community-create"),
     path("community/join/", views.community_join_view, name="community-join"),
     path("community/enter-code/", views.community_enter_code_view, name="community-enter-code"),
+    path("community/search/", views.community_search_view, name="community-search"),
     path("community/<int:pk>/", views.community_detail_view, name="community-detail"),
+    path("community/<int:pk>/search-users/", views.community_search_users_view, name="community-search-users"),
     path("community/<int:pk>/leave/", views.community_leave_view, name="community-leave"),
     path(
         "community/<int:pk>/accept-user-agreement/",

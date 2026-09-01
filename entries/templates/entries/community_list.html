@@ -103,7 +103,10 @@
                 {% csrf_token %}
                 {{ join_form.non_field_errors }}
 
-                <label for="{{ join_form.community.id_for_label }}">Community</label>
+                <label for="community-search">Search communities</label>
+                <input type="text" id="community-search" placeholder="Start typing a name&hellip;" autocomplete="off">
+                <ul id="community-search-results" class="search-results"></ul>
+                <p id="community-selected" class="helptext" hidden>Selected: <strong id="community-selected-name"></strong> &mdash; <button type="button" id="community-selected-clear" class="link-btn">change</button></p>
                 {{ join_form.community }}
                 {{ join_form.community.errors }}
 
@@ -137,6 +140,62 @@
 
             wireModal("create-community-btn", "create-community-modal-backdrop", "create-community-modal-close");
             wireModal("join-community-btn", "join-community-modal-backdrop", "join-community-modal-close");
+
+            var communitySearch = document.getElementById("community-search");
+            var communityResults = document.getElementById("community-search-results");
+            var communityHiddenInput = document.getElementById("{{ join_form.community.id_for_label }}");
+            var communitySelected = document.getElementById("community-selected");
+            var communitySelectedName = document.getElementById("community-selected-name");
+            var communitySelectedClear = document.getElementById("community-selected-clear");
+
+            if (communitySearch && communityResults && communityHiddenInput) {
+                var debounceTimer = null;
+
+                function selectCommunity(id, name) {
+                    communityHiddenInput.value = id;
+                    communitySelectedName.textContent = name;
+                    communitySelected.hidden = false;
+                    communitySearch.value = "";
+                    communitySearch.hidden = true;
+                    communityResults.innerHTML = "";
+                }
+
+                function clearSelection() {
+                    communityHiddenInput.value = "";
+                    communitySelected.hidden = true;
+                    communitySearch.hidden = false;
+                    communitySearch.focus();
+                }
+
+                communitySelectedClear.addEventListener("click", clearSelection);
+
+                communitySearch.addEventListener("input", function () {
+                    var query = communitySearch.value.trim();
+                    clearTimeout(debounceTimer);
+                    if (query.length < 2) {
+                        communityResults.innerHTML = "";
+                        return;
+                    }
+                    debounceTimer = setTimeout(function () {
+                        fetch("{% url 'entries:community-search' %}?q=" + encodeURIComponent(query))
+                            .then(function (response) { return response.json(); })
+                            .then(function (data) {
+                                communityResults.innerHTML = "";
+                                data.results.forEach(function (community) {
+                                    var li = document.createElement("li");
+                                    var button = document.createElement("button");
+                                    button.type = "button";
+                                    button.textContent = community.name;
+                                    button.addEventListener("click", function () {
+                                        selectCommunity(community.id, community.name);
+                                    });
+                                    li.appendChild(button);
+                                    communityResults.appendChild(li);
+                                });
+                            });
+                    }, 250);
+                });
+            }
         })();
     </script>
 {% endblock %}

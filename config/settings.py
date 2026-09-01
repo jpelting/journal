@@ -174,6 +174,27 @@ if not DEBUG:
     ]
 
 
+# Django's default logging config only sends WARNING+ output to console when DEBUG=True, so
+# without this, security warnings (e.g. CSRF-rejection reasons) vanish silently in production
+# instead of showing up in `fly logs`.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
+
+
 # Email (used for the "forgot password" flow). Defaults to printing emails to
 # the console/server log when DEBUG, since there's no mail server locally;
 # set DJANGO_EMAIL_BACKEND plus the EMAIL_* vars below for a real SMTP relay

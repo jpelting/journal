@@ -37,6 +37,11 @@ urlpatterns = [
     ),
     path("community/<int:pk>/add-member/", views.community_add_member_view, name="community-add-member"),
     path(
+        "community/<int:pk>/members/<int:membership_id>/remove/",
+        views.community_remove_member_view,
+        name="community-remove-member",
+    ),
+    path(
         "community/<int:pk>/requests/<int:membership_id>/approve/",
         views.community_approve_view,
         name="community-approve",

@@ -597,6 +597,19 @@ def community_reject_view(request, pk, membership_id):
     return redirect(community.get_absolute_url())
 
 
+@require_POST
+def community_remove_member_view(request, pk, membership_id):
+    community = get_object_or_404(Community, pk=pk, created_by=request.user)
+    membership = get_object_or_404(community.memberships, pk=membership_id, status="active")
+    if membership.user_id == community.created_by_id:
+        messages.error(request, "You can't remove the community admin.")
+        return redirect(community.get_absolute_url())
+    username = membership.user.username
+    membership.delete()
+    messages.success(request, f'Removed "{username}" from "{community.name}".')
+    return redirect(community.get_absolute_url())
+
+
 SEARCH_RESULT_LIMIT = 20
 
 

@@ -13,6 +13,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import (
+    Community,
+    CommunityMembership,
     DevotionalPrompt,
     Entry,
     LoginCount,
@@ -200,6 +202,47 @@ class MultiUserIsolationTests(TestCase):
         new_user = User.objects.create_user(username="newperson", password="pw12345")
         self.assertFalse(new_user.is_staff)
         self.assertFalse(new_user.is_superuser)
+
+
+class CommunityRemoveMemberTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(username="admin", password="pw12345")
+        self.member = User.objects.create_user(username="member", password="pw12345")
+        self.outsider = User.objects.create_user(username="outsider", password="pw12345")
+        self.community = Community.objects.create(name="Bro's Forever", created_by=self.admin)
+        self.admin_membership = CommunityMembership.objects.create(
+            community=self.community, user=self.admin, status="active"
+        )
+        self.member_membership = CommunityMembership.objects.create(
+            community=self.community, user=self.member, status="active"
+        )
+
+    def _remove_url(self, membership):
+        return reverse("entries:community-remove-member", args=[self.community.pk, membership.pk])
+
+    def test_admin_can_remove_an_active_member(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self._remove_url(self.member_membership))
+        self.assertRedirects(response, self.community.get_absolute_url())
+        self.assertFalse(
+            CommunityMembership.objects.filter(community=self.community, user=self.member).exists()
+        )
+
+    def test_non_admin_cannot_remove_a_member(self):
+        self.client.force_login(self.outsider)
+        response = self.client.post(self._remove_url(self.member_membership))
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(
+            CommunityMembership.objects.filter(community=self.community, user=self.member).exists()
+        )
+
+    def test_admin_cannot_remove_themselves_via_this_view(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self._remove_url(self.admin_membership))
+        self.assertRedirects(response, self.community.get_absolute_url())
+        self.assertTrue(
+            CommunityMembership.objects.filter(community=self.community, user=self.admin).exists()
+        )
 
 
 class FieldEncryptionTests(TestCase):

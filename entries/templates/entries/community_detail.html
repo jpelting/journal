@@ -16,7 +16,15 @@
         <h2>Members ({{ memberships|length }})</h2>
         <ul class="entry-list">
             {% for membership in memberships %}
-                <li>{{ membership.user.username }}{% if membership.user_id == community.created_by_id %} <span class="helptext">(admin)</span>{% endif %}</li>
+                <li>
+                    {{ membership.user.username }}{% if membership.user_id == community.created_by_id %} <span class="helptext">(admin)</span>{% endif %}
+                    {% if is_admin and membership.user_id != community.created_by_id %}
+                        <form method="post" action="{% url 'entries:community-remove-member' community.pk membership.pk %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-secondary">Remove</button>
+                        </form>
+                    {% endif %}
+                </li>
             {% endfor %}
         </ul>
     </section>

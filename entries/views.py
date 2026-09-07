@@ -697,10 +697,10 @@ def prayer_request_create_view(request):
     return redirect(next_url)
 
 
-def _next_stoic_prompt(user):
-    active = StoicPrompt.objects.filter(active=True)
-    used_ids = Entry.objects.filter(user=user).exclude(stoic_prompt__isnull=True).values_list(
-        "stoic_prompt_id", flat=True
+def _next_unused_prompt(model, field_name, user):
+    active = model.objects.filter(active=True)
+    used_ids = Entry.objects.filter(user=user).exclude(**{f"{field_name}__isnull": True}).values_list(
+        f"{field_name}_id", flat=True
     )
     unused = active.exclude(id__in=used_ids)
     # Once every active prompt has appeared in some entry of this user's, the cycle resets.
@@ -708,8 +708,12 @@ def _next_stoic_prompt(user):
     return pool.order_by("?").first()
 
 
-def _next_devotional_prompt(user=None):
-    return DevotionalPrompt.objects.filter(active=True).order_by("?").first()
+def _next_stoic_prompt(user):
+    return _next_unused_prompt(StoicPrompt, "stoic_prompt", user)
+
+
+def _next_devotional_prompt(user):
+    return _next_unused_prompt(DevotionalPrompt, "devotional_prompt", user)
 
 
 # journal_type -> (Entry FK field holding its prompt, function picking the next one)

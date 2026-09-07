@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import (
+    DevotionalPrompt,
     Entry,
     LoginCount,
     MomentCheckIn,
@@ -25,7 +26,7 @@ from .models import (
 from .push import send_due_notifications
 from .reengagement import send_due_reengagement_emails
 from .streaks import current_streak
-from .views import _next_stoic_prompt, _today_entry
+from .views import _next_devotional_prompt, _next_stoic_prompt, _today_entry
 
 
 class MultiUserIsolationTests(TestCase):
@@ -163,6 +164,20 @@ class MultiUserIsolationTests(TestCase):
         # user_b has used nothing, so prompt_1 must still be a possible pick for them
         # (proves the "already used" scoping doesn't leak across users).
         picks_for_b = {_next_stoic_prompt(self.user_b).pk for _ in range(20)}
+        self.assertIn(prompt_1.pk, picks_for_b)
+
+    def test_devotional_prompt_no_repeat_is_per_user(self):
+        # Mirrors test_stoic_prompt_no_repeat_is_per_user: DevotionalPrompt selection used to
+        # be plain order_by("?") with no repeat protection at all.
+        DevotionalPrompt.objects.update(active=False)
+        prompt_1 = DevotionalPrompt.objects.create(reference="Test 1:1", active=True)
+        prompt_2 = DevotionalPrompt.objects.create(reference="Test 2:2", active=True)
+        self.entry_a.devotional_prompt = prompt_1
+        self.entry_a.save()
+
+        self.assertEqual(_next_devotional_prompt(self.user_a), prompt_2)
+
+        picks_for_b = {_next_devotional_prompt(self.user_b).pk for _ in range(20)}
         self.assertIn(prompt_1.pk, picks_for_b)
 
     def test_today_entry_get_or_create_is_per_user(self):

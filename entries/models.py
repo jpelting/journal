@@ -674,6 +674,11 @@ class Community(models.Model):
     last_prayer_digest_sent_date = models.DateField(
         null=True, blank=True, help_text="Dedupes digest sends within the same day across cron ticks."
     )
+    last_prayer_digest_reminder_sent_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Dedupes the admin's 1-hour-before-digest reminder email within the same day across cron ticks.",
+    )
 
     admin_agreement_accepted_at = models.DateTimeField(
         null=True, blank=True, help_text="When the creator accepted the Community Admin Agreement to create this community."
@@ -722,11 +727,13 @@ class CommunityMembership(models.Model):
 
 class PrayerRequest(models.Model):
     """A community prayer request/concern, submitted as either "immediate" (triggers an
-    instant email + push to the community right away) or "scheduled" (held until the
-    community's next daily digest). Immediate requests are *also* rolled into that day's
-    digest alongside scheduled ones - see entries.prayer.send_due_prayer_digests(). Rows are
-    purged 30 minutes after their digest_sent_at (entries.prayer.purge_expired_prayer_requests()),
-    so this table only ever holds same-day, not-yet-digested-long-ago data.
+    instant email + push to the community, but only once the community admin approves it -
+    see immediate_approved_at below) or "scheduled" (held until the community's next daily
+    digest). Immediate requests are *also* rolled into that day's digest alongside scheduled
+    ones, whether or not they were ever approved for an instant send - see
+    entries.prayer.send_due_prayer_digests(). Rows are purged 30 minutes after their
+    digest_sent_at (entries.prayer.purge_expired_prayer_requests()), so this table only ever
+    holds same-day, not-yet-digested-long-ago data.
     """
 
     REQUEST_TYPE_CHOICES = [
@@ -742,6 +749,15 @@ class PrayerRequest(models.Model):
         default=False, help_text="Hides the requester's name in the community listing and in emails."
     )
     created_at = models.DateTimeField(default=timezone.now)
+    immediate_approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "When the community admin approved this immediate request for an instant "
+            "email/push. Only meaningful for request_type='immediate' - the instant "
+            "notification is held back until this is set."
+        ),
+    )
     immediate_sent_at = models.DateTimeField(
         null=True, blank=True, help_text="When the instant email/push went out, for an immediate request."
     )

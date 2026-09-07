@@ -1,8 +1,8 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -16,6 +16,8 @@ PURGE_DELAY_MINUTES = 30
 # community count, with anything left over naturally retried next tick since a community's
 # due-ness isn't consumed until its digest actually sends.
 MAX_COMMUNITIES_PER_TICK = 200
+
+DIGEST_REMINDER_LEAD_TIME = timedelta(hours=1)
 
 
 def _active_member_users(community):
@@ -44,9 +46,12 @@ def _send_push_to_members(users, title, body, url="/"):
 
 
 def send_immediate_prayer_notification(prayer_request):
-    """Instant email + push to every active member when an "immediate" prayer request is
-    submitted. The request itself is not sent/purged yet - it's rolled into that community's
-    next daily digest and purged from there (see send_due_prayer_digests/purge_expired_prayer_requests)."""
+    """Instant email + push to every active member for an "immediate" prayer request that the
+    community admin has approved (see notify_admin_of_immediate_prayer_request and
+    entries.views.community_prayer_request_approve_view - the instant send is held back until
+    then). The request itself is not sent/purged yet - it's rolled into that community's next
+    daily digest and purged from there (see send_due_prayer_digests/purge_expired_prayer_requests),
+    whether or not it was ever approved for this instant send."""
     community = prayer_request.community
     users = _active_member_users(community)
     context = {"community": community, "prayer_request": prayer_request}
@@ -61,6 +66,70 @@ def send_immediate_prayer_notification(prayer_request):
     )
     prayer_request.immediate_sent_at = timezone.now()
     prayer_request.save(update_fields=["immediate_sent_at"])
+
+
+def notify_admin_of_immediate_prayer_request(request, prayer_request):
+    """Alerts just the community admin (email + push, not the whole membership) that an
+    immediate prayer request is waiting on their approval before send_immediate_prayer_notification
+    fires. Called synchronously from prayer_request_create_view, not the cron tick, since the
+    whole point of "immediate" is to reach the admin fast."""
+    community = prayer_request.community
+    admin = community.created_by
+    community_url = request.build_absolute_uri(community.get_absolute_url())
+    context = {"community": community, "prayer_request": prayer_request, "community_url": community_url}
+    subject = render_to_string("entries/prayer_request_needs_approval_subject.txt", context).strip()
+    body = render_to_string("entries/prayer_request_needs_approval_email.txt", context)
+    if admin.email:
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [admin.email])
+    _send_push_to_members(
+        [admin],
+        "Prayer request awaiting approval",
+        f'An immediate prayer request in "{community.name}" is waiting on your approval.',
+        url=community_url,
+    )
+
+
+def send_due_prayer_digest_reminders(request):
+    """Emails each community admin, once DIGEST_REMINDER_LEAD_TIME before that community's
+    daily digest send, the list of requests still pending (not yet digested) - giving them a
+    window to edit or remove a request (e.g. for a requester's privacy) via the community admin
+    page before it goes out in the batch digest. Called on the same cron tick as
+    send_due_prayer_digests - see send_due_notifications_view.
+
+    Like _slot_due, this only checks a wall-clock time-of-day, so a digest time before 1am
+    would compute a reminder time that rolls back a calendar day; that edge case is accepted
+    for simplicity (default/typical digest times are evening), same tradeoff the rest of this
+    module's due-checks already make.
+    """
+    sent = 0
+    tz = ZoneInfo(settings.WEATHER_TIMEZONE)
+    now_local = timezone.now().astimezone(tz)
+    today_local = now_local.date()
+
+    for community in Community.objects.order_by("?")[:MAX_COMMUNITIES_PER_TICK]:
+        reminder_time = (
+            datetime.combine(today_local, community.prayer_digest_time) - DIGEST_REMINDER_LEAD_TIME
+        ).time()
+        if not _slot_due(
+            now_local, reminder_time, community.last_prayer_digest_reminder_sent_date, today_local
+        ):
+            continue
+
+        pending = list(community.prayer_requests.filter(digest_sent_at__isnull=True).select_related("user"))
+        if pending:
+            admin = community.created_by
+            community_url = request.build_absolute_uri(community.get_absolute_url())
+            context = {"community": community, "prayer_requests": pending, "community_url": community_url}
+            subject = render_to_string("entries/prayer_request_digest_reminder_subject.txt", context).strip()
+            body = render_to_string("entries/prayer_request_digest_reminder_email.txt", context)
+            if admin.email:
+                send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [admin.email])
+            sent += 1
+
+        community.last_prayer_digest_reminder_sent_date = today_local
+        community.save(update_fields=["last_prayer_digest_reminder_sent_date"])
+
+    return sent
 
 
 def send_due_prayer_digests():

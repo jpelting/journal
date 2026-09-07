@@ -1,0 +1,7 @@
+{% autoescape off %}"{{ community.name }}"'s daily prayer digest goes out in about an hour. Here's what's pending - edit or remove anything before then (e.g. for a requester's privacy) at {{ community_url }}:
+
+{% for prayer_request in prayer_requests %}{{ prayer_request.user.username }}{% if prayer_request.is_anonymous %} (shown as Anonymous to members){% endif %} - {{ prayer_request.get_request_type_display }}:
+{{ prayer_request.text }}
+
+{% endfor %}— The Wax Tablet
+{% endautoescape %}

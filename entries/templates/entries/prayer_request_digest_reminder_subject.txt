@@ -1,0 +1,1 @@
+{% autoescape off %}[{{ community.name }}] Review today's prayer requests before the digest goes out{% endautoescape %}

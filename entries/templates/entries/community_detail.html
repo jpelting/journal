@@ -138,6 +138,42 @@
         </section>
 
         <section class="part">
+            <h2>Pending Prayer Requests {% if pending_prayer_requests %}({{ pending_prayer_requests|length }}){% endif %}</h2>
+            <p class="helptext">Review, edit, or remove a request before it goes out in the daily digest — you'll also get an email about an hour before the digest sends if anything is still pending.</p>
+            {% if pending_prayer_requests %}
+                <ul class="entry-list">
+                    {% for pr in pending_prayer_requests %}
+                        <li>
+                            <p>
+                                <strong>{{ pr.user.username }}</strong>{% if pr.is_anonymous %} <span class="helptext">(anonymous to members)</span>{% endif %}
+                                <span class="helptext">&mdash; {{ pr.get_request_type_display }}{% if pr.request_type == "immediate" and pr.immediate_approved_at %}, already sent{% endif %}</span>
+                            </p>
+                            <form method="post" action="{% url 'entries:community-prayer-request-edit' community.pk pr.pk %}">
+                                {% csrf_token %}
+                                <textarea name="text" rows="3">{{ pr.text }}</textarea>
+                                <p class="form-actions"><button type="submit" class="btn btn-secondary">Save edit</button></p>
+                            </form>
+                            <p class="form-actions">
+                                {% if pr.request_type == "immediate" and not pr.immediate_approved_at %}
+                                    <form method="post" action="{% url 'entries:community-prayer-request-approve' community.pk pr.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn">Approve &amp; send now</button>
+                                    </form>
+                                {% endif %}
+                                <form method="post" action="{% url 'entries:community-prayer-request-remove' community.pk pr.pk %}" style="display:inline;" onsubmit="return confirm('Remove this prayer request?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger">Remove</button>
+                                </form>
+                            </p>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="helptext">Nothing pending right now.</p>
+            {% endif %}
+        </section>
+
+        <section class="part">
             <h2>Prayer request settings</h2>
             <p class="helptext">Members' prayer requests are bundled into one daily digest email sent at this time.</p>
             <form method="post" action="{% url 'entries:community-prayer-settings' community.pk %}" novalidate>

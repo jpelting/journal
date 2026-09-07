@@ -43,6 +43,7 @@ from .forms import (
     MomentCheckInForm,
     MorningCheckInForm,
     NotificationSettingsForm,
+    PrayerRequestAdminEditForm,
     PrayerRequestForm,
     SurveyForm,
 )
@@ -65,7 +66,13 @@ from .models import (
     SurveyResponse,
 )
 from .maintenance import clean_up_expired_sessions_if_due
-from .prayer import purge_expired_prayer_requests, send_due_prayer_digests, send_immediate_prayer_notification
+from .prayer import (
+    notify_admin_of_immediate_prayer_request,
+    purge_expired_prayer_requests,
+    send_due_prayer_digest_reminders,
+    send_due_prayer_digests,
+    send_immediate_prayer_notification,
+)
 from .reengagement import send_due_reengagement_emails
 from .weather import (
     get_current_weather,
@@ -257,6 +264,7 @@ def send_due_notifications_view(request):
     if not token or not hmac.compare_digest(token, settings.CRON_SECRET):
         return HttpResponseForbidden()
     sent = send_due_notifications()
+    prayer_digest_reminders_sent = send_due_prayer_digest_reminders(request)
     prayer_digests_sent = send_due_prayer_digests()
     prayer_requests_purged = purge_expired_prayer_requests()
     reengagement_emails_sent = send_due_reengagement_emails(request.build_absolute_uri(reverse("login")))
@@ -264,6 +272,7 @@ def send_due_notifications_view(request):
     return JsonResponse(
         {
             "sent": sent,
+            "prayer_digest_reminders_sent": prayer_digest_reminders_sent,
             "prayer_digests_sent": prayer_digests_sent,
             "prayer_requests_purged": prayer_requests_purged,
             "reengagement_emails_sent": reengagement_emails_sent,
@@ -552,6 +561,11 @@ def community_detail_view(request, pk):
         )
         context["add_member_form"] = AddMemberForm()
         context["prayer_settings_form"] = CommunityPrayerSettingsForm(instance=community)
+        context["pending_prayer_requests"] = (
+            community.prayer_requests.filter(digest_sent_at__isnull=True)
+            .select_related("user")
+            .order_by("created_at")
+        )
     return render(request, "entries/community_detail.html", context)
 
 
@@ -683,6 +697,48 @@ def community_prayer_settings_view(request, pk):
     return redirect(community.get_absolute_url())
 
 
+def _get_pending_prayer_request(community, prayer_request_id):
+    return get_object_or_404(community.prayer_requests, pk=prayer_request_id, digest_sent_at__isnull=True)
+
+
+@require_POST
+def community_prayer_request_approve_view(request, pk, prayer_request_id):
+    community = get_object_or_404(Community, pk=pk, created_by=request.user)
+    prayer_request = _get_pending_prayer_request(community, prayer_request_id)
+    if prayer_request.request_type != "immediate":
+        messages.error(request, "Only immediate prayer requests need approval.")
+    elif prayer_request.immediate_approved_at:
+        messages.info(request, "That prayer request was already approved and sent.")
+    else:
+        prayer_request.immediate_approved_at = timezone.now()
+        prayer_request.save(update_fields=["immediate_approved_at"])
+        send_immediate_prayer_notification(prayer_request)
+        messages.success(request, f'Approved — the immediate prayer request was sent to "{community.name}".')
+    return redirect(community.get_absolute_url())
+
+
+@require_POST
+def community_prayer_request_edit_view(request, pk, prayer_request_id):
+    community = get_object_or_404(Community, pk=pk, created_by=request.user)
+    prayer_request = _get_pending_prayer_request(community, prayer_request_id)
+    form = PrayerRequestAdminEditForm(request.POST, instance=prayer_request)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Prayer request updated.")
+    else:
+        messages.error(request, "Could not update that prayer request.")
+    return redirect(community.get_absolute_url())
+
+
+@require_POST
+def community_prayer_request_remove_view(request, pk, prayer_request_id):
+    community = get_object_or_404(Community, pk=pk, created_by=request.user)
+    prayer_request = _get_pending_prayer_request(community, prayer_request_id)
+    prayer_request.delete()
+    messages.success(request, "Prayer request removed.")
+    return redirect(community.get_absolute_url())
+
+
 def _safe_next_url(request):
     next_url = request.POST.get("next", "")
     if next_url and url_has_allowed_host_and_scheme(
@@ -699,8 +755,12 @@ def prayer_request_create_view(request):
     if form.is_valid():
         prayer_request = form.save()
         if prayer_request.request_type == "immediate":
-            send_immediate_prayer_notification(prayer_request)
-            messages.success(request, f'Immediate prayer request sent to "{prayer_request.community.name}".')
+            notify_admin_of_immediate_prayer_request(request, prayer_request)
+            messages.success(
+                request,
+                f'Immediate prayer request submitted to "{prayer_request.community.name}" — '
+                "the community admin will approve it before it goes out.",
+            )
         else:
             messages.success(
                 request, f'Prayer request saved — it will go out in "{prayer_request.community.name}"\'s next digest.'

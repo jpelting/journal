@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import mail
 from django.db import IntegrityError, connection, transaction
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -20,11 +20,13 @@ from .models import (
     LoginCount,
     MomentCheckIn,
     MotivationalQuote,
+    PrayerRequest,
     Profile,
     PushSubscription,
     SelfAffirmation,
     StoicPrompt,
 )
+from .prayer import send_due_prayer_digest_reminders
 from .push import send_due_notifications
 from .reengagement import send_due_reengagement_emails
 from .streaks import current_streak
@@ -643,3 +645,168 @@ class StreakTests(TestCase):
             self._mark_active(date(2030, 1, day))
         # Gaps on Jan 7 and Jan 14 are exactly 7 days apart - both are forgiven.
         self.assertEqual(current_streak(self.user, today=date(2030, 1, 15)), len(active_days))
+
+
+class PrayerRequestApprovalTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(username="admin", password="pw12345", email="admin@example.com")
+        self.member = User.objects.create_user(username="member", password="pw12345", email="member@example.com")
+        self.community = Community.objects.create(name="Bro's Forever", created_by=self.admin)
+        CommunityMembership.objects.create(
+            community=self.community,
+            user=self.admin,
+            status="active",
+            user_agreement_accepted_at=timezone.now(),
+        )
+        CommunityMembership.objects.create(
+            community=self.community,
+            user=self.member,
+            status="active",
+            user_agreement_accepted_at=timezone.now(),
+        )
+
+    def _create_prayer_request(self, *, request_type, text="Please pray for my family.", is_anonymous=False):
+        return PrayerRequest.objects.create(
+            community=self.community,
+            user=self.member,
+            request_type=request_type,
+            text=text,
+            is_anonymous=is_anonymous,
+        )
+
+    def test_immediate_request_holds_notification_and_alerts_admin_instead(self):
+        self.client.force_login(self.member)
+        self.client.post(
+            reverse("entries:prayer-request-create"),
+            data={"community": self.community.pk, "text": "Urgent need.", "is_immediate": "on"},
+        )
+        prayer_request = PrayerRequest.objects.get(community=self.community, user=self.member)
+        self.assertEqual(prayer_request.request_type, "immediate")
+        self.assertIsNone(prayer_request.immediate_sent_at)
+        self.assertIsNone(prayer_request.immediate_approved_at)
+
+        # Only the admin should have been emailed so far - not the whole membership.
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.admin.email])
+
+    def test_admin_approve_sends_the_instant_notification_to_members(self):
+        prayer_request = self._create_prayer_request(request_type="immediate")
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("entries:community-prayer-request-approve", args=[self.community.pk, prayer_request.pk])
+        )
+        self.assertRedirects(response, self.community.get_absolute_url())
+        prayer_request.refresh_from_db()
+        self.assertIsNotNone(prayer_request.immediate_approved_at)
+        self.assertIsNotNone(prayer_request.immediate_sent_at)
+        recipients = {addr for message in mail.outbox for addr in message.to}
+        self.assertIn(self.member.email, recipients)
+
+    def test_non_admin_cannot_approve(self):
+        prayer_request = self._create_prayer_request(request_type="immediate")
+        self.client.force_login(self.member)
+        response = self.client.post(
+            reverse("entries:community-prayer-request-approve", args=[self.community.pk, prayer_request.pk])
+        )
+        self.assertEqual(response.status_code, 404)
+        prayer_request.refresh_from_db()
+        self.assertIsNone(prayer_request.immediate_approved_at)
+
+    def test_admin_can_edit_a_pending_request(self):
+        prayer_request = self._create_prayer_request(request_type="scheduled", text="original text")
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("entries:community-prayer-request-edit", args=[self.community.pk, prayer_request.pk]),
+            data={"text": "edited for privacy"},
+        )
+        self.assertRedirects(response, self.community.get_absolute_url())
+        prayer_request.refresh_from_db()
+        self.assertEqual(prayer_request.text, "edited for privacy")
+
+    def test_non_admin_cannot_edit(self):
+        prayer_request = self._create_prayer_request(request_type="scheduled", text="original text")
+        self.client.force_login(self.member)
+        response = self.client.post(
+            reverse("entries:community-prayer-request-edit", args=[self.community.pk, prayer_request.pk]),
+            data={"text": "edited for privacy"},
+        )
+        self.assertEqual(response.status_code, 404)
+        prayer_request.refresh_from_db()
+        self.assertEqual(prayer_request.text, "original text")
+
+    def test_admin_can_remove_a_pending_request(self):
+        prayer_request = self._create_prayer_request(request_type="scheduled")
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("entries:community-prayer-request-remove", args=[self.community.pk, prayer_request.pk])
+        )
+        self.assertRedirects(response, self.community.get_absolute_url())
+        self.assertFalse(PrayerRequest.objects.filter(pk=prayer_request.pk).exists())
+
+    def test_already_digested_request_is_not_editable(self):
+        prayer_request = self._create_prayer_request(request_type="scheduled")
+        prayer_request.digest_sent_at = timezone.now()
+        prayer_request.save(update_fields=["digest_sent_at"])
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("entries:community-prayer-request-remove", args=[self.community.pk, prayer_request.pk])
+        )
+        self.assertEqual(response.status_code, 404)
+
+
+class PrayerDigestReminderTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(username="admin", password="pw12345", email="admin@example.com")
+        self.member = User.objects.create_user(username="member", password="pw12345", email="member@example.com")
+        self.community = Community.objects.create(name="Bro's Forever", created_by=self.admin)
+        CommunityMembership.objects.create(community=self.community, user=self.admin, status="active")
+        CommunityMembership.objects.create(community=self.community, user=self.member, status="active")
+        self.factory = RequestFactory()
+
+    def _fake_now_edt(self, hour, minute):
+        # America/New_York is UTC-4 in July (EDT) - avoids DST ambiguity in the test.
+        return datetime(2030, 7, 1, hour + 4, minute, tzinfo=ZoneInfo("UTC"))
+
+    def test_sends_admin_reminder_one_hour_before_digest_time_when_pending(self):
+        PrayerRequest.objects.create(
+            community=self.community, user=self.member, request_type="scheduled", text="pray for me"
+        )
+        request = self.factory.get("/")
+        with patch("django.utils.timezone.now", return_value=self._fake_now_edt(19, 5)):
+            sent = send_due_prayer_digest_reminders(request)
+        self.assertEqual(sent, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [self.admin.email])
+        self.community.refresh_from_db()
+        self.assertEqual(self.community.last_prayer_digest_reminder_sent_date, date(2030, 7, 1))
+
+    def test_does_not_send_before_the_reminder_window(self):
+        PrayerRequest.objects.create(
+            community=self.community, user=self.member, request_type="scheduled", text="pray for me"
+        )
+        request = self.factory.get("/")
+        with patch("django.utils.timezone.now", return_value=self._fake_now_edt(18, 55)):
+            sent = send_due_prayer_digest_reminders(request)
+        self.assertEqual(sent, 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_does_not_send_when_nothing_pending(self):
+        request = self.factory.get("/")
+        with patch("django.utils.timezone.now", return_value=self._fake_now_edt(19, 5)):
+            sent = send_due_prayer_digest_reminders(request)
+        self.assertEqual(sent, 0)
+        self.assertEqual(len(mail.outbox), 0)
+        self.community.refresh_from_db()
+        self.assertEqual(self.community.last_prayer_digest_reminder_sent_date, date(2030, 7, 1))
+
+    def test_only_sends_once_per_day(self):
+        PrayerRequest.objects.create(
+            community=self.community, user=self.member, request_type="scheduled", text="pray for me"
+        )
+        request = self.factory.get("/")
+        with patch("django.utils.timezone.now", return_value=self._fake_now_edt(19, 5)):
+            send_due_prayer_digest_reminders(request)
+        with patch("django.utils.timezone.now", return_value=self._fake_now_edt(19, 30)):
+            sent_again = send_due_prayer_digest_reminders(request)
+        self.assertEqual(sent_again, 0)
+        self.assertEqual(len(mail.outbox), 1)

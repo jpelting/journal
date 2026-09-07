@@ -333,6 +333,13 @@ class CommunityPrayerSettingsForm(forms.ModelForm):
         fields = ["prayer_digest_time"]
 
 
+class PrayerRequestAdminEditForm(forms.ModelForm):
+    class Meta:
+        model = PrayerRequest
+        fields = ["text"]
+        widgets = {"text": forms.Textarea(attrs={"rows": 4})}
+
+
 class PrayerRequestForm(forms.Form):
     community = forms.ModelChoiceField(queryset=Community.objects.none(), label="Community")
     text = forms.CharField(

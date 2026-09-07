@@ -56,6 +56,21 @@ urlpatterns = [
         views.community_prayer_settings_view,
         name="community-prayer-settings",
     ),
+    path(
+        "community/<int:pk>/prayer-requests/<int:prayer_request_id>/approve/",
+        views.community_prayer_request_approve_view,
+        name="community-prayer-request-approve",
+    ),
+    path(
+        "community/<int:pk>/prayer-requests/<int:prayer_request_id>/edit/",
+        views.community_prayer_request_edit_view,
+        name="community-prayer-request-edit",
+    ),
+    path(
+        "community/<int:pk>/prayer-requests/<int:prayer_request_id>/remove/",
+        views.community_prayer_request_remove_view,
+        name="community-prayer-request-remove",
+    ),
     path("prayer-request/", views.prayer_request_create_view, name="prayer-request-create"),
     path("announcements/dismiss/", views.dismiss_announcements_view, name="dismiss-announcements"),
     path("survey/", views.survey_view, name="survey"),

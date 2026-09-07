@@ -1,0 +1,8 @@
+{% autoescape off %}{{ prayer_request.user.username }} submitted an immediate prayer request in "{{ community.name }}". It won't be emailed/pushed to the community until you approve it.
+
+{{ prayer_request.text }}
+
+Review, approve, edit, or remove it here: {{ community_url }}
+
+— The Wax Tablet
+{% endautoescape %}

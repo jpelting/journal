@@ -74,6 +74,7 @@ from .prayer import (
     send_immediate_prayer_notification,
 )
 from .reengagement import send_due_reengagement_emails
+from .survey import send_due_survey_emails
 from .weather import (
     get_current_weather,
     get_tomorrow_forecast,
@@ -257,8 +258,9 @@ def send_due_notifications_view(request):
     an external cron-job.org job since this app has no in-process scheduler and the Fly
     machine auto-stops when idle. Not a Django-session endpoint - authenticated by a shared
     secret instead. Also drives the community prayer-request digest send/purge (see
-    entries/prayer.py) and the inactivity re-engagement email (see entries/reengagement.py)
-    on the same tick - piggybacking here avoids extra cron jobs/secrets."""
+    entries/prayer.py), the inactivity re-engagement email (see entries/reengagement.py), and
+    the one-time day-14 feedback survey email (see entries/survey.py) on the same tick -
+    piggybacking here avoids extra cron jobs/secrets."""
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.removeprefix("Bearer ").strip()
     if not token or not hmac.compare_digest(token, settings.CRON_SECRET):
@@ -268,6 +270,7 @@ def send_due_notifications_view(request):
     prayer_digests_sent = send_due_prayer_digests()
     prayer_requests_purged = purge_expired_prayer_requests()
     reengagement_emails_sent = send_due_reengagement_emails(request.build_absolute_uri(reverse("login")))
+    survey_emails_sent = send_due_survey_emails(request.build_absolute_uri(reverse("entries:survey")))
     session_cleanup_ran = clean_up_expired_sessions_if_due()
     return JsonResponse(
         {
@@ -276,6 +279,7 @@ def send_due_notifications_view(request):
             "prayer_digests_sent": prayer_digests_sent,
             "prayer_requests_purged": prayer_requests_purged,
             "reengagement_emails_sent": reengagement_emails_sent,
+            "survey_emails_sent": survey_emails_sent,
             "session_cleanup_ran": session_cleanup_ran,
         }
     )

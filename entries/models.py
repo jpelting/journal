@@ -590,6 +590,8 @@ class SurveyResponse(models.Model):
     """One user's answers to the one-time site-feedback survey, first offered on day 14
     after signup (see SURVEY_ELIGIBLE_ACCOUNT_AGE_DAYS) via entries.context_processors.
     A decline re-arms the prompt after SURVEY_DECLINE_COOLDOWN_DAYS; a completion is final.
+    Also emailed once at that same eligibility point (see entries.survey.send_due_survey_emails)
+    so the ask reaches the inbox in addition to the in-app prompt.
     """
 
     SECTION_CHOICES = [
@@ -604,6 +606,9 @@ class SurveyResponse(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="survey_response")
     declined_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    email_sent_at = models.DateTimeField(
+        null=True, blank=True, help_text="Dedupes the one-time survey email - sent at most once ever per user."
+    )
 
     overall_rating = models.PositiveSmallIntegerField(
         choices=RATING_CHOICES, null=True, blank=True,

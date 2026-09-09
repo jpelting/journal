@@ -25,11 +25,13 @@ from .models import (
     PushSubscription,
     SelfAffirmation,
     StoicPrompt,
+    SurveyResponse,
 )
 from .prayer import send_due_prayer_digest_reminders
 from .push import send_due_notifications
 from .reengagement import send_due_reengagement_emails
 from .streaks import current_streak
+from .survey import send_due_survey_emails
 from .views import _next_devotional_prompt, _next_stoic_prompt, _today_entry
 
 
@@ -586,6 +588,77 @@ class ReengagementEmailTests(TestCase):
             sent = send_due_reengagement_emails(self.LOGIN_URL)
         self.assertEqual(sent, 1)
         self.assertEqual(len(mail.outbox), 2)
+
+
+class SurveyEmailTests(TestCase):
+    FIXED_NOW = datetime(2030, 1, 15, 12, 0, tzinfo=ZoneInfo("UTC"))
+    SURVEY_URL = "https://example.com/survey/"
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="two-week-user",
+            email="fortnight@example.com",
+            password="pw12345",
+            date_joined=self.FIXED_NOW - timedelta(days=14),
+        )
+        self.profile = Profile.objects.create(
+            user=self.user,
+            name="Fortnight User",
+            date_of_birth=date(1990, 1, 1),
+            gender="prefer_not_to_say",
+            zipcode="28115",
+        )
+
+    def test_sends_once_account_is_old_enough(self):
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            sent = send_due_survey_emails(self.SURVEY_URL)
+        self.assertEqual(sent, 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Fortnight", mail.outbox[0].body)
+        self.assertIn(self.SURVEY_URL, mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].alternatives[0][1], "text/html")
+
+        response = SurveyResponse.objects.get(user=self.user)
+        self.assertEqual(response.email_sent_at, self.FIXED_NOW)
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(minutes=2)):
+            sent_again = send_due_survey_emails(self.SURVEY_URL)
+        self.assertEqual(sent_again, 0)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_does_not_send_before_eligible_age(self):
+        self.user.date_joined = self.FIXED_NOW - timedelta(days=5)
+        self.user.save()
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            sent = send_due_survey_emails(self.SURVEY_URL)
+        self.assertEqual(sent, 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_skips_users_who_already_completed_the_survey(self):
+        SurveyResponse.objects.create(user=self.user, completed_at=self.FIXED_NOW - timedelta(days=1))
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            sent = send_due_survey_emails(self.SURVEY_URL)
+        self.assertEqual(sent, 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_skips_users_without_a_profile(self):
+        self.profile.delete()
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            sent = send_due_survey_emails(self.SURVEY_URL)
+        self.assertEqual(sent, 0)
+
+    def test_does_not_resend_after_a_decline(self):
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            send_due_survey_emails(self.SURVEY_URL)
+
+        response = SurveyResponse.objects.get(user=self.user)
+        response.declined_at = self.FIXED_NOW + timedelta(minutes=5)
+        response.save()
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=100)):
+            sent = send_due_survey_emails(self.SURVEY_URL)
+        self.assertEqual(sent, 0)
+        self.assertEqual(len(mail.outbox), 1)
 
 
 class StreakTests(TestCase):

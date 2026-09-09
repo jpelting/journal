@@ -1,0 +1,48 @@
+{% autoescape on %}<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wax Tablet</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f1ea; font-family:Georgia,'Times New Roman',serif; color:#2b2620;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea; padding:24px 12px;">
+<tr>
+<td align="center">
+<table role="presentation" width="100%" style="max-width:560px; background-color:#ffffff; border:1px solid #e2dcc8; border-radius:8px;" cellpadding="0" cellspacing="0">
+<tr>
+<td style="background-color:#1a1a1a; padding:18px 28px; border-radius:8px 8px 0 0;">
+<span style="display:inline-block; width:26px; height:26px; line-height:26px; text-align:center; border-radius:50%; background-color:#c68b45; color:#1a1a1a; font-weight:bold; font-family:Georgia,serif; font-size:13px; vertical-align:middle;">WT</span>
+<span style="color:#eae5d9; font-size:17px; font-weight:bold; letter-spacing:0.04em; vertical-align:middle; padding-left:10px;">The Wax Tablet</span>
+</td>
+</tr>
+<tr>
+<td style="padding:32px 28px 8px;">
+<h1 style="margin:0 0 18px; font-size:21px; color:#2b2620;">Got a couple minutes?</h1>
+<p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#2b2620;">Hi {{ first_name }},</p>
+<p style="margin:0 0 16px; font-size:15px; line-height:1.6; color:#2b2620;">You've been using The Wax Tablet for a couple weeks now, and we'd love to hear how it's going.</p>
+<p style="margin:0 0 26px; font-size:15px; line-height:1.6; color:#2b2620;">Feedback is how we find out what's working, what isn't, and where to spend our energy next — it's the main way we make things better and get the app running smoother for everyone. Yours would genuinely help.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 12px;">
+<tr>
+<td style="border-radius:6px; background-color:#c68b45;">
+<a href="{{ survey_url }}" style="display:inline-block; padding:12px 26px; font-family:Georgia,'Times New Roman',serif; font-size:15px; font-weight:bold; color:#1a1a1a; text-decoration:none; border-radius:6px;">Share Your Feedback</a>
+</td>
+</tr>
+</table>
+<p style="margin:0 0 26px; font-size:13px; line-height:1.5; color:#8c8878;">Just a handful of questions — skip anything you'd rather not answer.</p>
+<p style="margin:0 0 6px; font-size:15px; line-height:1.6; color:#2b2620;">Thank you,</p>
+<p style="margin:0; font-size:15px; line-height:1.6; color:#2b2620;">The Wax Tablet</p>
+</td>
+</tr>
+<tr>
+<td style="padding:14px 28px; background-color:#f9f7f1; border-top:1px solid #e2dcc8; border-radius:0 0 8px 8px;">
+<p style="margin:0; font-size:12px; color:#8c8878;">You're getting this because it's been about two weeks since you joined The Wax Tablet. This is a one-time email.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
+{% endautoescape %}

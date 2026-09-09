@@ -1,0 +1,17 @@
+{% autoescape off %}Hi {{ first_name }},
+
+You've been using The Wax Tablet for a couple weeks now, and we'd love to
+hear how it's going.
+
+Feedback is how we find out what's working, what isn't, and where to spend
+our energy next — it's the main way we make things better and get the app
+running smoother for everyone. Yours would genuinely help.
+
+It's a short survey, just a handful of questions, and you can skip anything
+you'd rather not answer:
+
+{{ survey_url }}
+
+Thank you,
+The Wax Tablet
+{% endautoescape %}

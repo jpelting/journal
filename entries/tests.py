@@ -540,7 +540,7 @@ class ReengagementEmailTests(TestCase):
             user=self.user, last_activity_at=self.FIXED_NOW - timedelta(days=6)
         )
 
-    def test_sends_after_threshold_and_not_again_until_active_since(self):
+    def test_sends_after_threshold_and_not_again_before_repeat_interval(self):
         with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
             sent = send_due_reengagement_emails(self.LOGIN_URL)
         self.assertEqual(sent, 1)
@@ -550,10 +550,22 @@ class ReengagementEmailTests(TestCase):
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.last_reengagement_email_sent_at, self.FIXED_NOW)
 
-        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(minutes=2)):
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=2)):
             sent_again = send_due_reengagement_emails(self.LOGIN_URL)
         self.assertEqual(sent_again, 0)
         self.assertEqual(len(mail.outbox), 1)
+
+    def test_resends_on_fixed_interval_while_still_inactive(self):
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW):
+            send_due_reengagement_emails(self.LOGIN_URL)
+
+        # Still no activity at all - the repeat interval alone should trigger a resend.
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=5)):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 1)
+        self.assertEqual(len(mail.outbox), 2)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.last_reengagement_email_sent_at, self.FIXED_NOW + timedelta(days=5))
 
     def test_does_not_send_before_threshold(self):
         self.login_count.last_activity_at = self.FIXED_NOW - timedelta(days=2)
@@ -588,6 +600,71 @@ class ReengagementEmailTests(TestCase):
             sent = send_due_reengagement_emails(self.LOGIN_URL)
         self.assertEqual(sent, 1)
         self.assertEqual(len(mail.outbox), 2)
+
+    def test_first_stage_sends_four_emails_five_days_apart(self):
+        sent_at = self.FIXED_NOW
+        for expected_count in range(1, 5):
+            with patch("django.utils.timezone.now", return_value=sent_at):
+                sent = send_due_reengagement_emails(self.LOGIN_URL)
+            self.assertEqual(sent, 1)
+            self.profile.refresh_from_db()
+            self.assertEqual(self.profile.reengagement_emails_sent_count, expected_count)
+            sent_at += timedelta(days=5)
+        self.assertEqual(len(mail.outbox), 4)
+
+    def test_second_stage_requires_a_month_between_sends(self):
+        self.profile.reengagement_emails_sent_count = 4
+        self.profile.last_reengagement_email_sent_at = self.FIXED_NOW
+        self.profile.save()
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=10)):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 0)
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=30)):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 1)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.reengagement_emails_sent_count, 5)
+
+    def test_third_stage_requires_a_year_between_sends(self):
+        self.profile.reengagement_emails_sent_count = 10
+        self.profile.last_reengagement_email_sent_at = self.FIXED_NOW
+        self.profile.save()
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=100)):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 0)
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=365)):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 1)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.reengagement_emails_sent_count, 11)
+
+    def test_goes_silent_once_the_schedule_is_exhausted(self):
+        self.profile.reengagement_emails_sent_count = 15
+        self.profile.last_reengagement_email_sent_at = self.FIXED_NOW
+        self.profile.save()
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=3650)):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 0)
+
+    def test_new_episode_after_exhaustion_restarts_at_stage_one(self):
+        self.profile.reengagement_emails_sent_count = 15
+        self.profile.last_reengagement_email_sent_at = self.FIXED_NOW
+        self.profile.save()
+
+        # User comes back well after the schedule ran out, then goes quiet again.
+        self.login_count.last_activity_at = self.FIXED_NOW + timedelta(days=400)
+        self.login_count.save()
+
+        with patch("django.utils.timezone.now", return_value=self.FIXED_NOW + timedelta(days=406)):
+            sent = send_due_reengagement_emails(self.LOGIN_URL)
+        self.assertEqual(sent, 1)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.reengagement_emails_sent_count, 1)
 
 
 class SurveyEmailTests(TestCase):

@@ -342,7 +342,15 @@ class Profile(models.Model):
     last_reengagement_email_sent_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Dedupes across cron ticks - only sent again after activity resumes and inactivity recurs.",
+        help_text="Dedupes across cron ticks - the next send waits for the current stage's interval to pass.",
+    )
+    reengagement_emails_sent_count = models.PositiveIntegerField(
+        default=0,
+        help_text=(
+            "How many reengagement emails have gone out in the current inactivity episode - "
+            "drives which stage's interval applies next (see entries.reengagement). Reset to 0 "
+            "once the user is active again and a new episode starts."
+        ),
     )
 
     def __str__(self):
